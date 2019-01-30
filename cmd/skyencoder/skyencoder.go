@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/faith/structtag"
+	"github.com/fatih/structtag"
 	"github.com/golang/tools/go/loader"
 	"github.com/skycoin/skyencoder"
 	"golang.org/x/tools/imports"
