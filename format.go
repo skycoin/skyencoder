@@ -105,9 +105,6 @@ func BuildEncodeSizeByteArray(name string, length int64, options *Options) strin
 }
 
 func BuildEncodeSizeArray(name, elemVarName, elemSection string, length int64, isDynamic bool, options *Options) string {
-	// TODO -- if the array elements are of fixed size, we can compute faster with a multiplication
-	// rather than iterating each element in the array
-
 	if isDynamic {
 		return fmt.Sprintf(`
 		// %[1]s
@@ -148,7 +145,6 @@ func BuildEncodeSizeByteSlice(name string, options *Options) string {
 }
 
 func BuildEncodeSizeSlice(name, elemVarName, elemSection string, isDynamic bool, options *Options) string {
-	// TODO - check if the length would exceed math.MaxUint32
 	var body string
 
 	if isDynamic {
@@ -240,7 +236,8 @@ func BuildEncodeBool(name string, castType bool, options *Options) string {
 		name = cast("bool", name)
 	}
 	return fmt.Sprintf(`
-	e.Bool(%s)
+	// %[1]s
+	e.Bool(%[1]s)
 	`, name)
 }
 
@@ -249,7 +246,8 @@ func BuildEncodeUint8(name string, castType bool, options *Options) string {
 		name = cast("uint8", name)
 	}
 	return fmt.Sprintf(`
-	e.Uint8(%s)
+	// %[1]s
+	e.Uint8(%[1]s)
 	`, name)
 }
 
@@ -258,7 +256,8 @@ func BuildEncodeUint16(name string, castType bool, options *Options) string {
 		name = cast("uint16", name)
 	}
 	return fmt.Sprintf(`
-	e.Uint16(%s)
+	// %[1]s
+	e.Uint16(%[1]s)
 	`, name)
 }
 
@@ -267,7 +266,8 @@ func BuildEncodeUint32(name string, castType bool, options *Options) string {
 		name = cast("uint32", name)
 	}
 	return fmt.Sprintf(`
-	e.Uint32(%s)
+	// %[1]s
+	e.Uint32(%[1]s)
 	`, name)
 }
 
@@ -276,7 +276,8 @@ func BuildEncodeUint64(name string, castType bool, options *Options) string {
 		name = cast("uint64", name)
 	}
 	return fmt.Sprintf(`
-	e.Uint64(%s)
+	// %[1]s
+	e.Uint64(%[1]s)
 	`, name)
 }
 
@@ -285,7 +286,8 @@ func BuildEncodeInt8(name string, castType bool, options *Options) string {
 		name = cast("int8", name)
 	}
 	return fmt.Sprintf(`
-	e.Int8(%s)
+	// %[1]s
+	e.Int8(%[1]s)
 	`, name)
 }
 
@@ -294,7 +296,8 @@ func BuildEncodeInt16(name string, castType bool, options *Options) string {
 		name = cast("int16", name)
 	}
 	return fmt.Sprintf(`
-	e.Int16(%s)
+	// %[1]s
+	e.Int16(%[1]s)
 	`, name)
 }
 
@@ -303,7 +306,8 @@ func BuildEncodeInt32(name string, castType bool, options *Options) string {
 		name = cast("int32", name)
 	}
 	return fmt.Sprintf(`
-	e.Int32(%s)
+	// %[1]s
+	e.Int32(%[1]s)
 	`, name)
 }
 
@@ -312,17 +316,22 @@ func BuildEncodeInt64(name string, castType bool, options *Options) string {
 		name = cast("int64", name)
 	}
 	return fmt.Sprintf(`
-	e.Int64(%s)
+	// %[1]s
+	e.Int64(%[1]s)
 	`, name)
 }
 
 func BuildEncodeString(name string, options *Options) string {
 	body := fmt.Sprintf(`
-	e.Bytes([]byte(%s))
-	`, name)
+	%[2]s
+
+	// %[1]s
+	e.Bytes([]byte(%[1]s))
+	`, name, encodeMaxLengthCheck(name, options))
 
 	if options != nil && options.OmitEmpty {
 		return fmt.Sprintf(`
+			// omitempty
 			if len(%[1]s) != 0 {
 				%[2]s
 			}
@@ -334,6 +343,7 @@ func BuildEncodeString(name string, options *Options) string {
 
 func BuildEncodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`
+	// %[1]s
 	copy(e.Buffer[:], %[1]s[:])
 	e.Buffer = e.Buffer[len(%[1]s):]
 	`, name)
@@ -341,6 +351,7 @@ func BuildEncodeByteArray(name string, options *Options) string {
 
 func BuildEncodeArray(name, elemVarName, elemSection string, options *Options) string {
 	return fmt.Sprintf(`
+	// %[1]s
 	for %[2]s := range %[1]s {
 		%[3]s
 	}
@@ -349,17 +360,24 @@ func BuildEncodeArray(name, elemVarName, elemSection string, options *Options) s
 
 func BuildEncodeByteSlice(name string, options *Options) string {
 	body := fmt.Sprintf(`
+	%[2]s
+
+	// %[1]s length check
 	if len(%[1]s) > math.MaxUint32 {
-		panic("%[1]s length exceeds math.MaxUint32")
+		return errors.New("%[1]s length exceeds math.MaxUint32")
 	}
+
+	// %[1]s length
 	e.Uint32(uint32(len(%[1]s)))
 
+	// %[1]s copy
 	copy(e.Buffer[:], %[1]s[:])
 	e.Buffer = e.Buffer[len(%[1]s):]
-	`, name)
+	`, name, encodeMaxLengthCheck(name, options))
 
 	if options != nil && options.OmitEmpty {
 		return fmt.Sprintf(`
+			// omitempty
 			if len(%[1]s) != 0 {
 				%[2]s
 			}
@@ -371,18 +389,25 @@ func BuildEncodeByteSlice(name string, options *Options) string {
 
 func BuildEncodeSlice(name, elemVarName, elemSection string, options *Options) string {
 	body := fmt.Sprintf(`
+	%[4]s
+
+	// %[1]s length check
 	if len(%[1]s) > math.MaxUint32 {
-		panic("%[1]s length exceeds math.MaxUint32")
+		return errors.New("%[1]s length exceeds math.MaxUint32")
 	}
+
+	// %[1]s length
 	e.Uint32(uint32(len(%[1]s)))
 
+	// %[1]s
 	for _, %[2]s := range %[1]s {
 		%[3]s
 	}
-	`, name, elemVarName, elemSection)
+	`, name, elemVarName, elemSection, encodeMaxLengthCheck(name, options))
 
 	if options != nil && options.OmitEmpty {
 		return fmt.Sprintf(`
+			// omitempty
 			if len(%[1]s) != 0 {
 				%[2]s
 			}
@@ -394,15 +419,28 @@ func BuildEncodeSlice(name, elemVarName, elemSection string, options *Options) s
 
 func BuildEncodeMap(name, keyVarName, elemVarName, keySection, elemSection string, options *Options) string {
 	body := fmt.Sprintf(`
+	// %[1]s
+
+	%[6]s
+
+	// %[1]s length check
+	if len(%[1]s) > math.MaxUint32 {
+		return errors.New("%[1]s length exceeds math.MaxUint32")
+	}
+
+	// %[1]s length
+	e.Uint32(uint32(len(%[1]s)))
+
 	for %[2]s, %[3]s := range %[1]s {
 		%[4]s
 
 		%[5]s
 	}
-	`, name, keyVarName, elemVarName, keySection, elemSection)
+	`, name, keyVarName, elemVarName, keySection, elemSection, encodeMaxLengthCheck(name, options))
 
 	if options != nil && options.OmitEmpty {
 		return fmt.Sprintf(`
+			// omitempty
 			if len(%[1]s) != 0 {
 				%[2]s
 			}
@@ -410,6 +448,19 @@ func BuildEncodeMap(name, keyVarName, elemVarName, keySection, elemSection strin
 	}
 
 	return body
+}
+
+func encodeMaxLengthCheck(name string, options *Options) string {
+	if options != nil && options.MaxLength > 0 {
+		return fmt.Sprintf(`
+		// %[1]s maxlen check
+		if len(%[1]s) > %d {
+			return ErrMaxLenExceeded
+		}
+		`, name, options.MaxLength)
+	}
+
+	return ""
 }
 
 /* Decode */
@@ -420,6 +471,7 @@ func BuildDecodeBool(name string, castType bool, typeName string, options *Optio
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Bool()
 	if err != nil {
 		return err
@@ -434,6 +486,7 @@ func BuildDecodeUint8(name string, castType bool, typeName string, options *Opti
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Uint8()
 	if err != nil {
 		return err
@@ -448,6 +501,7 @@ func BuildDecodeUint16(name string, castType bool, typeName string, options *Opt
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Uint16()
 	if err != nil {
 		return err
@@ -462,6 +516,7 @@ func BuildDecodeUint32(name string, castType bool, typeName string, options *Opt
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Uint32()
 	if err != nil {
 		return err
@@ -476,6 +531,7 @@ func BuildDecodeUint64(name string, castType bool, typeName string, options *Opt
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Uint64()
 	if err != nil {
 		return err
@@ -490,6 +546,7 @@ func BuildDecodeInt8(name string, castType bool, typeName string, options *Optio
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Int8()
 	if err != nil {
 		return err
@@ -504,6 +561,7 @@ func BuildDecodeInt16(name string, castType bool, typeName string, options *Opti
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Int16()
 	if err != nil {
 		return err
@@ -518,6 +576,7 @@ func BuildDecodeInt32(name string, castType bool, typeName string, options *Opti
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Int32()
 	if err != nil {
 		return err
@@ -532,6 +591,7 @@ func BuildDecodeInt64(name string, castType bool, typeName string, options *Opti
 		assign = cast(typeName, assign)
 	}
 	return fmt.Sprintf(`
+	// %[1]s
 	i, err := d.Int64()
 	if err != nil {
 		return err
@@ -540,18 +600,9 @@ func BuildDecodeInt64(name string, castType bool, typeName string, options *Opti
 	`, name, assign)
 }
 
-func maxLengthCheck(lengthName string, options *Options) string {
-	if options != nil && options.MaxLength > 0 {
-		return fmt.Sprintf(`if %s > %d {
-			return ErrMaxLenExceeded
-		}`, lengthName, options.MaxLength)
-	}
-
-	return ""
-}
-
 func BuildDecodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`
+	// %[1]s
 	if len(d.Buffer) < len(%[1]s) {
 		return ErrBufferUnderflow
 	}
@@ -562,6 +613,7 @@ func BuildDecodeByteArray(name string, options *Options) string {
 
 func BuildDecodeArray(name, elemVarName, elemSection string, options *Options) string {
 	return fmt.Sprintf(`
+	// %[1]s
 	for %[2]s := range %[1]s {
 		%[3]s
 	}
@@ -570,6 +622,10 @@ func BuildDecodeArray(name, elemVarName, elemSection string, options *Options) s
 
 func BuildDecodeByteSlice(name string, options *Options) string {
 	return fmt.Sprintf(`{
+	// %[1]s
+
+	%[3]s
+
 	if len(d.Buffer) < 4 {
 		return ErrBufferUnderflow
 	}
@@ -588,11 +644,15 @@ func BuildDecodeByteSlice(name string, options *Options) string {
 
 	copy(%[1]s[:], d.Buffer[:length])
 	d.Buffer = d.Buffer[length:]
-	}`, name, maxLengthCheck("length", options))
+	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
 func BuildDecodeSlice(name, elemVarName, elemSection, typeName string, options *Options) string {
 	return fmt.Sprintf(`{
+	// %[1]s
+
+	%[6]s
+
 	if len(d.Buffer) < 4 {
 		return ErrBufferUnderflow
 	}
@@ -615,11 +675,15 @@ func BuildDecodeSlice(name, elemVarName, elemSection, typeName string, options *
 		%[3]s
 	}
 
-	}`, name, elemVarName, elemSection, typeName, maxLengthCheck("length", options))
+	}`, name, elemVarName, elemSection, typeName, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
 func BuildDecodeString(name string, options *Options) string {
 	return fmt.Sprintf(`{
+	// %[1]s
+
+	%[3]s
+
 	if len(d.Buffer) < 4 {
 		return ErrBufferUnderflow
 	}
@@ -638,11 +702,15 @@ func BuildDecodeString(name string, options *Options) string {
 
 	%[1]s = string(d.Buffer[:length])
 	d.Buffer = d.Buffer[length:]
-	}`, name, maxLengthCheck("length", options))
+	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
 func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, typeName string, options *Options) string {
 	return fmt.Sprintf(`{
+	// %[1]s
+
+	%[8]s
+
 	if len(d.Buffer) < 4 {
 		return ErrBufferUnderflow
 	}
@@ -657,6 +725,8 @@ func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, type
 		return ErrBufferUnderflow
 	}
 
+	%[7]s
+
 	%[1]s = make(%[6]s)
 
 	for i := 0; i < length; i++ {
@@ -666,5 +736,25 @@ func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, type
 
 		%[1]s[%[2]s] = %[3]s
 	}
-	}`, name, keyVarName, elemVarName, keySection, elemSection, typeName)
+	}`, name, keyVarName, elemVarName, keySection, elemSection, typeName, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
+}
+
+func decodeMaxLengthCheck(options *Options) string {
+	if options != nil && options.MaxLength > 0 {
+		return fmt.Sprintf(`if length > %d {
+			return ErrMaxLenExceeded
+		}`, options.MaxLength)
+	}
+
+	return ""
+}
+
+func decodeOmitEmptyCheck(options *Options) string {
+	if options != nil && options.OmitEmpty {
+		return `if len(d.Buffer) == 0 {
+			return nil
+		}`
+	}
+
+	return ""
 }

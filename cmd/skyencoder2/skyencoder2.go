@@ -5,35 +5,49 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
-	"go/format"
 	"go/types"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/faith/structtag"
 	"github.com/golang/tools/go/loader"
 	"github.com/skycoin/skyencoder"
+	"golang.org/x/tools/imports"
 )
 
 /* TODO
 
-- Add option to specify the package name of the generated file? Otherwise generate in the package where the struct is found
-- Use package of the struct and the destination package to include/exclude the package qualifier on named types
-- Format with imports automatically (can use goimports? or collect external package names used?)
-- Size calculation for buffer: precompute size instead of separate additions, allowing multiplication of fixed size element slices to avoid an extra function call
--	OR - allow the var counter name to be variable, and use a different one (e.g. "j") at different layers
-- Size calculation for buffer: code to check if length of slice/string/map would exceed math.MaxUint32
-- Size calculation for buffer, and/or encoding: check maxlen property and return error
-- Support embedded fields? (required for coin.SignedBlock)
+TO DOCUMENT:
+
+* If -package flag is used, considers the generated code as a different package from the one in which the struct is defined (even if the name is the same),
+if you want to generate the code in the same package as the struct, do not specify -package.
+
+* Encoder details such as anonymous fields
 
 */
+
+const debug = false
+
+func debugPrintln(args ...interface{}) {
+	if debug {
+		fmt.Println(args...)
+	}
+}
+
+func debugPrintf(msg string, args ...interface{}) {
+	if debug {
+		fmt.Printf(msg, args...)
+	}
+}
 
 var (
 	structNames = flag.String("struct", "", "comma-separated list of struct names; must be set")
 	output      = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
 	buildTags   = flag.String("tags", "", "comma-separated list of build tags to apply")
+	destPackage = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
 )
 
 func usage() {
@@ -103,11 +117,11 @@ func main() {
 		log.Fatal("loader.Config.Load:", err)
 	}
 
-	fmt.Println("args:", args)
+	debugPrintln("args:", args)
 
-	structs := make([]*types.Struct, len(structNames))
+	structs := make([]*structInfo, len(structNames))
 	for i, name := range structNames {
-		s, err := findStructTypeInProgram(program, name)
+		s, err := findStructInfoInProgram(program, name)
 		if err != nil {
 			log.Fatalf("Program did not contain valid struct for name %s: %v", name, err)
 		}
@@ -118,100 +132,130 @@ func main() {
 		structs[i] = s
 	}
 
-	fmt.Println()
-	fmt.Println("---- ENCODE ----")
-	fmt.Println()
-
-	for i, s := range structs {
-		fmt.Println(s.String())
-		section, err := buildCodeSectionEncode(s, "obj", false, nil)
-		if err != nil {
-			log.Fatal("buildCodeSectionEncode failed:", err)
+	// Determine if the arg is a directory or multiple files
+	// If it is a directory, construct an artificial filename in that directory for goimports formatting,
+	// otherwise use the first filename specified (they must all be in the same package)
+	fmtFilename := args[0]
+	stat, err := os.Stat(args[0])
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Fatal(err)
 		}
-
-		f := wrapEncodeFunc(structNames[i], section)
-
-		formattedBytes, err := format.Source([]byte(f))
-		if err != nil {
-			log.Fatal("format.Source failed:", err)
-		}
-
-		fmt.Println(string(formattedBytes))
+		// argument is a import path e.g. "github.com/skycoin/skycoin/src/coin"
+		fmtFilename = filepath.Join(structs[0].Package.Path(), "foo123123123123999.go")
+	} else if stat.IsDir() {
+		fmtFilename = filepath.Join(args[0], "foo123123123123999.go")
 	}
 
-	fmt.Println()
-	fmt.Println("---- DECODE ----")
-	fmt.Println()
-
 	for i, s := range structs {
-		fmt.Println(s.String())
-		section, err := buildCodeSectionDecode(s, "obj", false, "", nil)
+		debugPrintln("Package path:", s.Package.Path())
+		encodeSizeSrc, err := buildEncodeSize(structNames[i], s.Struct)
 		if err != nil {
-			log.Fatal("buildCodeSectionDecode failed:", err)
+			log.Fatal("buildEncodeSize failed:", err)
 		}
 
-		f := wrapDecodeFunc(structNames[i], section)
-
-		// fmt.Println(f)
-
-		formattedBytes, err := format.Source([]byte(f))
+		encodeSrc, err := buildEncode(structNames[i], s.Struct)
 		if err != nil {
-			log.Fatal("format.Source failed:", err)
+			log.Fatal("buildEncode failed:", err)
 		}
 
-		fmt.Println(string(formattedBytes))
-	}
-
-	fmt.Println()
-	fmt.Println("---- ENCODE SIZE ----")
-	fmt.Println()
-
-	for i, s := range structs {
-		fmt.Println(s.String())
-		section, _, err := buildCodeSectionEncodeSize(s, "obj", "i", nil)
-		if err != nil {
-			log.Fatal("buildCodeSectionEncodeSize failed:", err)
+		// Use the struct's package for localizing type names to the package where application,
+		// unless destPackage is specified, then treat all type names as non-local
+		internalPackage := s.Package
+		if *destPackage != "" {
+			internalPackage = nil
 		}
 
-		f := wrapEncodeSizeFunc(structNames[i], section, "i")
-
-		fmt.Println(f)
-
-		formattedBytes, err := format.Source([]byte(f))
+		decodeSrc, err := buildDecode(structNames[i], s.Struct, internalPackage)
 		if err != nil {
-			log.Fatal("format.Source failed:", err)
+			log.Fatal("buildDecode failed:", err)
 		}
 
-		fmt.Println(string(formattedBytes))
+		src := append(encodeSizeSrc, append(encodeSrc, decodeSrc...)...)
+
+		pkgName := *destPackage
+		if pkgName == "" {
+			pkgName = s.Package.Name()
+		}
+
+		pkgHeader := fmt.Sprintf("package %s\n\n", pkgName)
+		src = append([]byte(pkgHeader), src...)
+
+		// Format with imports
+		src, err = imports.Process(fmtFilename, src, &imports.Options{
+			Fragment:  true,
+			Comments:  true,
+			TabIndent: true,
+			TabWidth:  8,
+		})
+		if err != nil {
+			log.Fatal("imports.Process failed:", err)
+		}
+
+		fmt.Println(string(src))
 	}
 }
 
-func wrapEncodeFunc(structName, funcBody string) string {
-	return fmt.Sprintf(`
-func Encode%[1]s(e *encoder.Encoder, obj *%[1]s) {
-		%[2]s
+func buildEncodeSize(name string, s *types.Struct) ([]byte, error) {
+	section, _, err := buildCodeSectionEncodeSize(s, "obj", nil)
+	if err != nil {
+		return nil, err
 	}
-	`, structName, funcBody)
+
+	return wrapEncodeSizeFunc(name, section), nil
 }
 
-func wrapDecodeFunc(structName, funcBody string) string {
-	return fmt.Sprintf(`
-func Decode%[1]s(e *encoder.Decoder, obj *%[1]s) error {
-		%[2]s
+func buildEncode(name string, s *types.Struct) ([]byte, error) {
+	section, err := buildCodeSectionEncode(s, "obj", false, nil)
+	if err != nil {
+		return nil, err
 	}
-	`, structName, funcBody)
+
+	return wrapEncodeFunc(name, section), nil
 }
 
-func wrapEncodeSizeFunc(structName, funcBody, counterName string) string {
-	return fmt.Sprintf(`
+func buildDecode(name string, s *types.Struct, p *types.Package) ([]byte, error) {
+	section, err := buildCodeSectionDecode(s, p, "obj", false, "", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return wrapDecodeFunc(name, section), nil
+}
+
+func wrapEncodeFunc(structName, funcBody string) []byte {
+	return []byte(fmt.Sprintf(`
+// Encode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder
+func Encode%[1]s(e *encoder.Encoder, obj *%[1]s) error {
+	%[2]s
+
+	return nil
+}
+`, structName, funcBody))
+}
+
+func wrapEncodeSizeFunc(structName, funcBody string) []byte {
+	return []byte(fmt.Sprintf(`
+// EncodeSize%[1]s computes the size of an encoded object of type %[1]s
 func EncodeSize%[1]s(obj *%[1]s) int {
-		%[3]s := 0
+	i := 0
 
-		%[2]s
+	%[2]s
 
-		return %[3]s
-	}
-	`, structName, funcBody, counterName)
+	return i
+}
+`, structName, funcBody))
+}
+
+func wrapDecodeFunc(structName, funcBody string) []byte {
+	return []byte(fmt.Sprintf(`
+// Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder
+func Decode%[1]s(e *encoder.Decoder, obj *%[1]s) error {
+	%[2]s
+
+	return nil
+}
+`, structName, funcBody))
 }
 
 func isDir(name string) bool {
@@ -222,16 +266,40 @@ func isDir(name string) bool {
 	return info.IsDir()
 }
 
-func findStructTypeInProgram(p *loader.Program, name string) (*types.Struct, error) {
+type structInfo struct {
+	Struct  *types.Struct
+	Package *types.Package
+}
+
+func findStructInfoInProgram(p *loader.Program, name string) (*structInfo, error) {
+	// For programs loaded by file, the package will be in p.Created. Look here first
 	for _, pk := range p.Created {
 		s, err := findStructTypeInPackage(pk, name)
 		if err != nil {
 			return nil, err
 		}
 		if s != nil {
-			return s, nil
+			return &structInfo{
+				Struct:  s,
+				Package: pk.Pkg,
+			}, nil
 		}
 	}
+
+	// For programs loaded by import path, the package will be in imported
+	for _, pk := range p.Imported {
+		s, err := findStructTypeInPackage(pk, name)
+		if err != nil {
+			return nil, err
+		}
+		if s != nil {
+			return &structInfo{
+				Struct:  s,
+				Package: pk.Pkg,
+			}, nil
+		}
+	}
+
 	return nil, nil
 }
 
@@ -266,7 +334,7 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 	// castType applies to basic int types; if true, an additional cast will be made in the generated code.
 	// This is to convert types like "type Foo int8" back to int8
 
-	fmt.Printf("buildCodeSectionEncode type=%T varName=%s castType=%v options=%+v\n", t, varName, castType, options)
+	debugPrintf("buildCodeSectionEncode type=%T varName=%s castType=%v options=%+v\n", t, varName, castType, options)
 
 	if options != nil {
 		if options.OmitEmpty && !omitEmptyIsValid(t) {
@@ -321,11 +389,6 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 		sections := make([]string, x.NumFields())
 		for i := 0; i < x.NumFields(); i++ {
 			f := x.Field(i)
-
-			// TODO -- determine if the original encoder handles embedded fields or not
-			if f.Embedded() {
-				return "", fmt.Errorf("struct referenced as %q contains embedded field", varName)
-			}
 
 			// TODO -- confirm that the original encoder ignores unexported fields
 			if !f.Exported() {
@@ -392,11 +455,11 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 	}
 }
 
-func buildCodeSectionEncodeSize(t types.Type, varName, counterName string, options *skyencoder.Options) (string, bool, error) {
+func buildCodeSectionEncodeSize(t types.Type, varName string, options *skyencoder.Options) (string, bool, error) {
 	// castType applies to basic int types; if true, an additional cast will be made in the generated code.
 	// This is to convert types like "type Foo int8" back to int8
 
-	fmt.Printf("buildCodeSectionEncodeSize type=%T varName=%s counterName=%s options=%+v\n", t, varName, counterName, options)
+	debugPrintf("buildCodeSectionEncodeSize type=%T varName=%s options=%+v\n", t, varName, options)
 
 	if options != nil {
 		if options.OmitEmpty && !omitEmptyIsValid(t) {
@@ -406,102 +469,80 @@ func buildCodeSectionEncodeSize(t types.Type, varName, counterName string, optio
 
 	switch x := t.(type) {
 	case *types.Named:
-		return buildCodeSectionEncodeSize(x.Underlying(), varName, counterName, options)
+		return buildCodeSectionEncodeSize(x.Underlying(), varName, options)
 
 	case *types.Basic:
 		switch x.Kind() {
 		case types.Bool:
-			return skyencoder.BuildEncodeSizeBool(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeBool(varName, options), false, nil
 		case types.Int8:
-			return skyencoder.BuildEncodeSizeInt8(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeInt8(varName, options), false, nil
 		case types.Int16:
-			return skyencoder.BuildEncodeSizeInt16(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeInt16(varName, options), false, nil
 		case types.Int32:
-			return skyencoder.BuildEncodeSizeInt32(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeInt32(varName, options), false, nil
 		case types.Int64:
-			return skyencoder.BuildEncodeSizeInt64(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeInt64(varName, options), false, nil
 		case types.Uint8:
-			return skyencoder.BuildEncodeSizeUint8(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeUint8(varName, options), false, nil
 		case types.Uint16:
-			return skyencoder.BuildEncodeSizeUint16(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeUint16(varName, options), false, nil
 		case types.Uint32:
-			return skyencoder.BuildEncodeSizeUint32(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeUint32(varName, options), false, nil
 		case types.Uint64:
-			return skyencoder.BuildEncodeSizeUint64(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeUint64(varName, options), false, nil
 		case types.String:
-			return skyencoder.BuildEncodeSizeString(varName, counterName, options), true, nil
+			return skyencoder.BuildEncodeSizeString(varName, options), true, nil
 		default:
-			return "", false, fmt.Errorf("Unhandled *types.Basic type %s for var %s", x.Name(), varName)
+			return "", false, fmt.Errorf("Unhandled *types.Basic type %q for var %q", x.Name(), varName)
 		}
 
 	case *types.Array:
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return skyencoder.BuildEncodeSizeByteArray(varName, counterName, x.Len(), options), false, nil
+			return skyencoder.BuildEncodeSizeByteArray(varName, x.Len(), options), false, nil
 		}
 
-		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", counterName, nil)
+		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		elemSectionCounterName := counterName
-		if !isDynamic {
-			elemSectionCounterName = counterName + counterName
-		}
-		elemSection = fmt.Sprintf(elemSection, counterName)
-
-		return skyencoder.BuildEncodeSizeArray(varName, counterName, "x", elemSectionCounterName, elemSection, x.Len(), isDynamic, options), isDynamic, nil
+		return skyencoder.BuildEncodeSizeArray(varName, "x", elemSection, x.Len(), isDynamic, options), isDynamic, nil
 
 	case *types.Slice:
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return skyencoder.BuildEncodeSizeByteSlice(varName, counterName, options), false, nil
+			return skyencoder.BuildEncodeSizeByteSlice(varName, options), false, nil
 		}
 
-		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", counterName, nil)
+		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		elemSectionCounterName := counterName
-		if !isDynamic {
-			elemSectionCounterName = counterName + counterName
-		}
-		elemSection = fmt.Sprintf(elemSection, counterName)
-
-		return skyencoder.BuildEncodeSizeSlice(varName, counterName, "x", elemSectionCounterName, elemSection, isDynamic, options), true, nil
+		return skyencoder.BuildEncodeSizeSlice(varName, "x", elemSection, isDynamic, options), true, nil
 
 	case *types.Map:
-		keySection, isDynamicKey, err := buildCodeSectionEncodeSize(x.Key(), "k", counterName, nil)
+		keySection, isDynamicKey, err := buildCodeSectionEncodeSize(x.Key(), "k", nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		elemSection, isDynamicElem, err := buildCodeSectionEncodeSize(x.Elem(), "v", counterName, nil)
+		elemSection, isDynamicElem, err := buildCodeSectionEncodeSize(x.Elem(), "v", nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		innerCounterName := counterName
-		if !isDynamicKey && !isDynamicKey {
-			innerCounterName = counterName + counterName
-		}
-
-		return skyencoder.BuildEncodeSizeMap(varName, counterName, "k", "v", innerCounterName, keySection, elemSection, isDynamicKey, isDynamicElem, options), true, nil
+		return skyencoder.BuildEncodeSizeMap(varName, "k", "v", keySection, elemSection, isDynamicKey, isDynamicElem, options), true, nil
 
 	case *types.Struct:
 		isDynamic := false
 		sections := make([]string, x.NumFields())
 		for i := 0; i < x.NumFields(); i++ {
 			f := x.Field(i)
-
-			// TODO -- determine if the original encoder handles embedded fields or not
-			if f.Embedded() {
-				return "", false, fmt.Errorf("struct referenced as %q contains embedded field", varName)
-			}
 
 			// TODO -- confirm that the original encoder ignores unexported fields
 			if !f.Exported() {
@@ -525,7 +566,7 @@ func buildCodeSectionEncodeSize(t types.Type, varName, counterName string, optio
 			}
 
 			nextVarName := fmt.Sprintf("%s.%s", varName, f.Name())
-			section, sectionIsDynamic, err := buildCodeSectionEncodeSize(f.Type(), nextVarName, counterName, options)
+			section, sectionIsDynamic, err := buildCodeSectionEncodeSize(f.Type(), nextVarName, options)
 			if err != nil {
 				return "", false, err
 			}
@@ -544,15 +585,19 @@ func buildCodeSectionEncodeSize(t types.Type, varName, counterName string, optio
 	}
 }
 
-func buildCodeSectionDecode(t types.Type, varName string, castType bool, typeName string, options *skyencoder.Options) (string, error) {
+func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, castType bool, typeName string, options *skyencoder.Options) (string, error) {
 	// castType applies to basic int types; if true, an additional cast will be made in the generated code.
 	// This is to convert types like "type Foo int8" back to int8
 
-	fmt.Printf("buildCodeSectionDecode type=%T varName=%s castType=%v options=%+v\n", t, varName, castType, options)
+	pkgName := ""
+	if p != nil {
+		pkgName = p.String()
+	}
+	debugPrintf("buildCodeSectionDecode type=%T package=%s varName=%s castType=%v options=%+v\n", t, pkgName, varName, castType, options)
 
 	if options != nil {
 		if options.MaxLength != 0 && !maxLenIsValid(t) {
-			return "", errors.New("maxlen is only valid for slice and string")
+			return "", errors.New("maxlen is only valid for slice, string and map")
 		}
 	}
 
@@ -563,14 +608,14 @@ func buildCodeSectionDecode(t types.Type, varName string, castType bool, typeNam
 		// but incorrect if we want it in the same package.
 		// Need to detect if we are generating code to the same package that the type is declared in,
 		// and if so, then use x.Obj().Name() which will return the type name without package
-		return buildCodeSectionDecode(x.Underlying(), varName, true, x.String(), options)
+		return buildCodeSectionDecode(x.Underlying(), p, varName, true, x.String(), options)
 
 	case *types.Basic:
 		if typeName == "" {
 			typeName = x.Name()
 		}
 
-		fmt.Printf("types.Basic type name is %s\n", typeName)
+		debugPrintf("types.Basic type name is %s\n", typeName)
 
 		switch x.Kind() {
 		case types.Bool:
@@ -598,27 +643,22 @@ func buildCodeSectionDecode(t types.Type, varName string, castType bool, typeNam
 		}
 
 	case *types.Map:
-		keySection, err := buildCodeSectionDecode(x.Key(), "k", false, "", nil)
+		keySection, err := buildCodeSectionDecode(x.Key(), p, "k", false, "", nil)
 		if err != nil {
 			return "", err
 		}
 
-		elemSection, err := buildCodeSectionDecode(x.Elem(), "v", false, "", nil)
+		elemSection, err := buildCodeSectionDecode(x.Elem(), p, "v", false, "", nil)
 		if err != nil {
 			return "", err
 		}
 
-		return skyencoder.BuildDecodeMap(varName, "k", "v", keySection, elemSection, mapTypeName(x), options), nil
+		return skyencoder.BuildDecodeMap(varName, "k", "v", keySection, elemSection, mapTypeName(x, p), options), nil
 
 	case *types.Struct:
 		sections := make([]string, x.NumFields())
 		for i := 0; i < x.NumFields(); i++ {
 			f := x.Field(i)
-
-			// TODO -- determine if the original encoder handles embedded fields or not
-			if f.Embedded() {
-				return "", fmt.Errorf("struct referenced as %q contains embedded field", varName)
-			}
 
 			// TODO -- confirm that the original encoder ignores unexported fields
 			if !f.Exported() {
@@ -635,7 +675,7 @@ func buildCodeSectionDecode(t types.Type, varName string, castType bool, typeNam
 			}
 
 			nextVarName := fmt.Sprintf("%s.%s", varName, f.Name())
-			section, err := buildCodeSectionDecode(f.Type(), nextVarName, false, "", options)
+			section, err := buildCodeSectionDecode(f.Type(), p, nextVarName, false, "", options)
 			if err != nil {
 				return "", err
 			}
@@ -652,7 +692,7 @@ func buildCodeSectionDecode(t types.Type, varName string, castType bool, typeNam
 			return skyencoder.BuildDecodeByteArray(varName, options), nil
 		}
 
-		elemSection, err := buildCodeSectionDecode(elem, "x", false, "", nil)
+		elemSection, err := buildCodeSectionDecode(elem, p, "x", false, "", nil)
 		if err != nil {
 			return "", err
 		}
@@ -666,44 +706,46 @@ func buildCodeSectionDecode(t types.Type, varName string, castType bool, typeNam
 			return skyencoder.BuildDecodeByteSlice(varName, options), nil
 		}
 
-		elemSection, err := buildCodeSectionDecode(elem, "x", false, "", nil)
+		elemSection, err := buildCodeSectionDecode(elem, p, "x", false, "", nil)
 		if err != nil {
 			return "", err
 		}
 
-		return skyencoder.BuildDecodeSlice(varName, "x", elemSection, sliceTypeName(x), options), nil
+		return skyencoder.BuildDecodeSlice(varName, "x", elemSection, sliceTypeName(x, p), options), nil
 
 	default:
 		return "", fmt.Errorf("Unhandled type %T for var %s", x, varName)
 	}
 }
 
-func sliceTypeName(t *types.Slice) string {
-	elemType := typeNameOf(t.Elem())
+func sliceTypeName(t *types.Slice, p *types.Package) string {
+	elemType := typeNameOf(t.Elem(), p)
 	return fmt.Sprintf("[]%s", elemType)
 }
 
-func mapTypeName(t *types.Map) string {
+func mapTypeName(t *types.Map, p *types.Package) string {
 	// t.String() will return a type with fully qualified import paths, e.g.
 	// map[int32]coin.UxOut will return "map[int32]github.com/skycoin/skycoin/src/coin.UxOut"
 	// I can't find a way to get the type name without the import path, other than constructing it manually
-	// TODO - this will include the package name regardless of the relative package
-	keyType := typeNameOf(t.Key())
-	elemType := typeNameOf(t.Elem())
+	keyType := typeNameOf(t.Key(), p)
+	elemType := typeNameOf(t.Elem(), p)
 	return fmt.Sprintf("map[%s]%s", keyType, elemType)
 }
 
-func typeNameOf(t types.Type) string {
+func typeNameOf(t types.Type, p *types.Package) string {
 	switch x := t.(type) {
 	case *types.Named:
 		obj := x.Obj()
+		if p != nil && obj.Pkg().Path() == p.Path() {
+			return obj.Name()
+		}
 		return fmt.Sprintf("%s.%s", obj.Pkg().Name(), obj.Name())
 	case *types.Basic:
 		return x.Name()
 	case *types.Map:
-		return mapTypeName(x)
+		return mapTypeName(x, p)
 	case *types.Slice:
-		return sliceTypeName(x)
+		return sliceTypeName(x, p)
 	case *types.Array:
 		return t.String()
 	case *types.Struct:
@@ -742,7 +784,7 @@ func maxLenIsValid(t types.Type) bool {
 		default:
 			return false
 		}
-	case *types.Slice:
+	case *types.Slice, *types.Map:
 		return true
 	default:
 		return false
@@ -811,71 +853,4 @@ func isByte(t types.Type) bool {
 	default:
 		return false
 	}
-}
-
-func walkStructFields(s *types.Struct, prefix string) {
-	for i := 0; i < s.NumFields(); i++ {
-		f := s.Field(i)
-		tag := s.Tag(i)
-
-		fmt.Printf("%sStruct field i=%d name=%s type=%T, anon=%v embed=%v export=%v tag=%s\n", prefix, i, f.Name(), f.Type(), f.Anonymous(), f.Embedded(), f.Exported(), tag)
-
-		ft := f.Type()
-		switch x := ft.(type) {
-		case *types.Named:
-			handleType(x.Underlying(), prefix)
-		default:
-			handleType(ft, prefix)
-		}
-	}
-}
-
-func handleType(t types.Type, prefix string) {
-	switch x := t.(type) {
-	case *types.Basic:
-		switch x.Kind() {
-		case types.Bool:
-			// TODO -- here is where we write out generated code into the buffer
-			fmt.Printf("%s^^^BOOL^^^\n", prefix)
-		case types.Int8:
-			fmt.Printf("%s^^^INT8^^^\n", prefix)
-		case types.Int16:
-			fmt.Printf("%s^^^INT16^^^\n", prefix)
-		case types.Int32:
-			fmt.Printf("%s^^^INT32^^^\n", prefix)
-		case types.Int64:
-			fmt.Printf("%s^^^INT64^^^\n", prefix)
-		case types.Uint8:
-			fmt.Printf("%s^^^UINT8^^^\n", prefix)
-		case types.Uint16:
-			fmt.Printf("%s^^^UINT16^^^\n", prefix)
-		case types.Uint32:
-			fmt.Printf("%s^^^UINT32^^^\n", prefix)
-		case types.Uint64:
-			fmt.Printf("%s^^^UINT64^^^\n", prefix)
-		case types.String:
-			fmt.Printf("%s^^^STRING^^^\n", prefix)
-		default:
-			fmt.Printf("%sUNHANDLED BASIC TYPE %s\n", prefix, x.Name())
-		}
-
-	case *types.Map:
-		fmt.Printf("%s^^^MAP^^^ keyType=%T elemType=%T\n", prefix, x.Key(), x.Elem())
-	case *types.Struct:
-		walkStructFields(x, prefix+"\t")
-	case *types.Array:
-		fmt.Printf("%s^^^ARRAY^^^ len=%d elemType=%T\n", prefix, x.Len(), x.Elem())
-	case *types.Slice:
-		fmt.Printf("%s^^^SLICE^^^ elemType=%T\n", prefix, x.Elem())
-	default:
-		fmt.Printf("%sUNHANDLED TYPE %T\n", prefix, x)
-	}
-}
-
-func fullTypeName(x *types.Named) string {
-	fTypeName := x.Obj().Name()
-	if pkg := x.Obj().Pkg(); pkg != nil {
-		fTypeName = fmt.Sprintf("%s.%s", pkg.Name(), fTypeName)
-	}
-	return fTypeName
 }
