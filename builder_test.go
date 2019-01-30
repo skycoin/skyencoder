@@ -95,37 +95,8 @@ type DemoStruct struct {
 }
 
 type DemoStructOmitEmpty struct {
+	Int32     int32
 	OmitEmpty []byte `enc:",omitempty"`
-}
-
-func TestBuildCode(t *testing.T) {
-	structName := "DemoStruct"
-	program, err := LoadProgram([]string{"."}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sInfo, err := FindStructInfoInProgram(program, structName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fn := "./demo_struct_skyencoder_test.go"
-	src, err := BuildStructEncoder(sInfo, "", fn)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
-	// and clean it up after the test
-
-	// defer removeFile(fn)
-	err = ioutil.WriteFile(fn, src, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	verifyProgramCompiles(t, ".")
 }
 
 func removeFile(fn string) {
@@ -159,4 +130,39 @@ func verifyProgramCompiles(t *testing.T, dir string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func testBuildCode(t *testing.T, structName, filename string) {
+	program, err := LoadProgram([]string{"."}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sInfo, err := FindStructInfoInProgram(program, structName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src, err := BuildStructEncoder(sInfo, "", filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
+	// and clean it up after the test
+	defer removeFile(filename)
+	err = ioutil.WriteFile(filename, src, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyProgramCompiles(t, ".")
+}
+
+func TestBuildDemoStruct(t *testing.T) {
+	testBuildCode(t, "DemoStruct", "./demo_struct_skyencoder_test.go")
+}
+
+func TestBuildOmitEmptyStruct(t *testing.T) {
+	testBuildCode(t, "DemoStructOmitEmpty", "./demo_struct_omit_empty_skyencoder_test.go")
 }

@@ -15,9 +15,11 @@ import (
 
 /* TODO
 
-- test cases
-- nested slices/arrays need to be aware of nesting for the index variable name
+- benchmark results against the encoder
 - travis
+- test cases using skycoin objects (basic test in here, most tests in skycoin)
+- add go:generate in skycoin
+- add skycoin tests (verify entire db can be loaded)
 
 TO DOCUMENT:
 
@@ -26,6 +28,7 @@ if you want to generate the code in the same package as the struct, do not speci
 - document encoding format
 - document usage in golang (maxlen, omitempty, "-", ignores unexported fields)
 - document cli usage, go generate usage
+- document install instructions
 
 */
 
