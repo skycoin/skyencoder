@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"go/build"
 	"go/types"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -19,6 +21,9 @@ import (
 )
 
 /* TODO
+
+- handle ErrRemainingBytes when decoding
+- test cases
 
 TO DOCUMENT:
 
@@ -44,33 +49,32 @@ func debugPrintf(msg string, args ...interface{}) {
 }
 
 var (
-	structNames = flag.String("struct", "", "comma-separated list of struct names; must be set")
-	output      = flag.String("output", "", "output file name; default srcdir/<type>_string.go")
+	structName  = flag.String("struct", "", "struct name, must be set")
+	output      = flag.String("output", "", "output file name; default srcdir/<struct_name>_skyencoder.go")
 	buildTags   = flag.String("tags", "", "comma-separated list of build tags to apply")
 	destPackage = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
 )
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage of skyencoder2:\n")
-	fmt.Fprintf(os.Stderr, "\tskyencoder2 [flags] -struct T [directory]\n")
-	fmt.Fprintf(os.Stderr, "\tskyencoder2 [flags] -struct T files... # Must be a single package\n")
+	fmt.Fprintf(os.Stderr, "Usage of skyencoder:\n")
+	fmt.Fprintf(os.Stderr, "\tskyencoder [flags] -struct T [go import path e.g. github.com/skycoin/skycoin/src/coin]\n")
+	fmt.Fprintf(os.Stderr, "\tskyencoder [flags] -struct T files... # Must be a single package\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
 
 func main() {
 	log.SetFlags(0)
-	log.SetPrefix("skyencoder2: ")
+	log.SetPrefix("skyencoder: ")
 
 	flag.Usage = usage
 	flag.Parse()
 
-	if len(*structNames) == 0 {
+	if *structName == "" {
 		flag.Usage()
 		os.Exit(2)
 	}
 
-	structNames := strings.Split(*structNames, ",")
 	var tags []string
 	if len(*buildTags) > 0 {
 		tags = strings.Split(*buildTags, ",")
@@ -119,81 +123,139 @@ func main() {
 
 	debugPrintln("args:", args)
 
-	structs := make([]*structInfo, len(structNames))
-	for i, name := range structNames {
-		s, err := findStructInfoInProgram(program, name)
-		if err != nil {
-			log.Fatalf("Program did not contain valid struct for name %s: %v", name, err)
-		}
-		if s == nil {
-			log.Fatal("Program does not contain type:", name)
-		}
-
-		structs[i] = s
+	sInfo, err := findStructInfoInProgram(program, *structName)
+	if err != nil {
+		log.Fatalf("Program did not contain valid struct for name %s: %v", *structName, err)
+	}
+	if sInfo == nil {
+		log.Fatal("Program does not contain type:", *structName)
 	}
 
 	// Determine if the arg is a directory or multiple files
 	// If it is a directory, construct an artificial filename in that directory for goimports formatting,
 	// otherwise use the first filename specified (they must all be in the same package)
 	fmtFilename := args[0]
+	destPath := filepath.Dir(args[0])
+
 	stat, err := os.Stat(args[0])
 	if err != nil {
 		if !os.IsNotExist(err) {
 			log.Fatal(err)
 		}
 		// argument is a import path e.g. "github.com/skycoin/skycoin/src/coin"
-		fmtFilename = filepath.Join(structs[0].Package.Path(), "foo123123123123999.go")
+		destPath, err = findDiskPathOfImport(sInfo.Package.Path())
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmtFilename = filepath.Join(sInfo.Package.Path(), "foo123123123123999.go")
 	} else if stat.IsDir() {
+		destPath = args[0]
 		fmtFilename = filepath.Join(args[0], "foo123123123123999.go")
 	}
 
-	for i, s := range structs {
-		debugPrintln("Package path:", s.Package.Path())
-		encodeSizeSrc, err := buildEncodeSize(structNames[i], s.Struct)
-		if err != nil {
-			log.Fatal("buildEncodeSize failed:", err)
-		}
-
-		encodeSrc, err := buildEncode(structNames[i], s.Struct)
-		if err != nil {
-			log.Fatal("buildEncode failed:", err)
-		}
-
-		// Use the struct's package for localizing type names to the package where application,
-		// unless destPackage is specified, then treat all type names as non-local
-		internalPackage := s.Package
-		if *destPackage != "" {
-			internalPackage = nil
-		}
-
-		decodeSrc, err := buildDecode(structNames[i], s.Struct, internalPackage)
-		if err != nil {
-			log.Fatal("buildDecode failed:", err)
-		}
-
-		src := append(encodeSizeSrc, append(encodeSrc, decodeSrc...)...)
-
-		pkgName := *destPackage
-		if pkgName == "" {
-			pkgName = s.Package.Name()
-		}
-
-		pkgHeader := fmt.Sprintf("package %s\n\n", pkgName)
-		src = append([]byte(pkgHeader), src...)
-
-		// Format with imports
-		src, err = imports.Process(fmtFilename, src, &imports.Options{
-			Fragment:  true,
-			Comments:  true,
-			TabIndent: true,
-			TabWidth:  8,
-		})
-		if err != nil {
-			log.Fatal("imports.Process failed:", err)
-		}
-
-		fmt.Println(string(src))
+	src, err := buildStructEncoder(*structName, sInfo, *destPackage, fmtFilename)
+	if err != nil {
+		log.Fatal("buildStructEncoder failed:", err)
 	}
+
+	debugPrintln(string(src))
+
+	outputFn := *output
+	if outputFn == "" {
+		// If the input is a filename, put next to the file
+		// If the input is a package, put in the package
+		fn := fmt.Sprintf("%s_skyencoder.go", toSnakeCase(*structName))
+		outputFn = filepath.Join(destPath, fn)
+	}
+
+	if err := ioutil.WriteFile(outputFn, src, 0644); err != nil {
+		log.Fatal("ioutil.WriteFile failed:", err)
+	}
+}
+
+var (
+	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
+)
+
+func toSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
+}
+
+func findDiskPathOfImport(importPath string) (string, error) {
+	// Maps an import path (e.g. "github.com/skycoin/skycoin/src/coin") to a path on disk,
+	// searching GOPATH for the first matching directory
+	// TODO -- this might not work with go modules
+	gopath := os.Getenv("GOPATH")
+	pts := strings.Split(gopath, ":")
+	for _, pt := range pts {
+		if pt == "" {
+			continue
+		}
+
+		fullPath := filepath.Join(filepath.Join(pt, "src/"), importPath)
+
+		stat, err := os.Stat(fullPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return "", err
+			}
+		} else if stat.IsDir() {
+			return fullPath, nil
+		}
+	}
+
+	return "", nil
+}
+
+func buildStructEncoder(structName string, s *structInfo, destPackage, fmtFilename string) ([]byte, error) {
+	debugPrintln("Package path:", s.Package.Path())
+	encodeSizeSrc, err := buildEncodeSize(structName, s.Struct)
+	if err != nil {
+		return nil, fmt.Errorf("buildEncodeSize failed: %v", err)
+	}
+
+	encodeSrc, err := buildEncode(structName, s.Struct)
+	if err != nil {
+		return nil, fmt.Errorf("buildEncode failed: %v", err)
+	}
+
+	// Use the struct's package for localizing type names to the package where application,
+	// unless destPackage is specified, then treat all type names as non-local
+	internalPackage := s.Package
+	if destPackage != "" {
+		internalPackage = nil
+	}
+
+	decodeSrc, err := buildDecode(structName, s.Struct, internalPackage)
+	if err != nil {
+		return nil, fmt.Errorf("buildDecode failed: %v", err)
+	}
+
+	src := append(encodeSizeSrc, append(encodeSrc, decodeSrc...)...)
+
+	pkgName := destPackage
+	if pkgName == "" {
+		pkgName = s.Package.Name()
+	}
+
+	pkgHeader := fmt.Sprintf("package %s\n\n", pkgName)
+	src = append([]byte(pkgHeader), src...)
+
+	// Format with imports
+	src, err = imports.Process(fmtFilename, src, &imports.Options{
+		Fragment:  false,
+		Comments:  true,
+		TabIndent: true,
+		TabWidth:  8,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("imports.Process failed: %v", err)
+	}
+
+	return src, nil
 }
 
 func buildEncodeSize(name string, s *types.Struct) ([]byte, error) {
@@ -250,7 +312,7 @@ func EncodeSize%[1]s(obj *%[1]s) int {
 func wrapDecodeFunc(structName, funcBody string) []byte {
 	return []byte(fmt.Sprintf(`
 // Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder
-func Decode%[1]s(e *encoder.Decoder, obj *%[1]s) error {
+func Decode%[1]s(d *encoder.Decoder, obj *%[1]s) error {
 	%[2]s
 
 	return nil

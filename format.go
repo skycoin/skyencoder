@@ -19,14 +19,14 @@ type Options struct {
 func BuildEncodeSizeBool(name string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 1
+		i++
 	`, name)
 }
 
 func BuildEncodeSizeUint8(name string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 1
+		i++
 	`, name)
 }
 
@@ -54,7 +54,7 @@ func BuildEncodeSizeUint64(name string, options *Options) string {
 func BuildEncodeSizeInt8(name string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 1
+		i++
 	`, name)
 }
 
@@ -352,7 +352,7 @@ func BuildEncodeByteArray(name string, options *Options) string {
 func BuildEncodeArray(name, elemVarName, elemSection string, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
-	for %[2]s := range %[1]s {
+	for _, %[2]s := range %[1]s {
 		%[3]s
 	}
 	`, name, elemVarName, elemSection)
@@ -455,7 +455,7 @@ func encodeMaxLengthCheck(name string, options *Options) string {
 		return fmt.Sprintf(`
 		// %[1]s maxlen check
 		if len(%[1]s) > %d {
-			return ErrMaxLenExceeded
+			return encoder.ErrMaxLenExceeded
 		}
 		`, name, options.MaxLength)
 	}
@@ -470,13 +470,14 @@ func BuildDecodeBool(name string, castType bool, typeName string, options *Optio
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Bool()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -485,14 +486,14 @@ func BuildDecodeUint8(name string, castType bool, typeName string, options *Opti
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Uint8()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
-	`, name, assign)
+	}`, name, assign)
 }
 
 func BuildDecodeUint16(name string, castType bool, typeName string, options *Options) string {
@@ -500,13 +501,14 @@ func BuildDecodeUint16(name string, castType bool, typeName string, options *Opt
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Uint16()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -515,13 +517,14 @@ func BuildDecodeUint32(name string, castType bool, typeName string, options *Opt
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Uint32()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -530,13 +533,14 @@ func BuildDecodeUint64(name string, castType bool, typeName string, options *Opt
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Uint64()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -545,13 +549,14 @@ func BuildDecodeInt8(name string, castType bool, typeName string, options *Optio
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Int8()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -560,13 +565,14 @@ func BuildDecodeInt16(name string, castType bool, typeName string, options *Opti
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Int16()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -575,13 +581,14 @@ func BuildDecodeInt32(name string, castType bool, typeName string, options *Opti
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Int32()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
@@ -590,32 +597,35 @@ func BuildDecodeInt64(name string, castType bool, typeName string, options *Opti
 	if castType {
 		assign = cast(typeName, assign)
 	}
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	i, err := d.Int64()
 	if err != nil {
 		return err
 	}
 	%[1]s = %[2]s
+	}
 	`, name, assign)
 }
 
 func BuildDecodeByteArray(name string, options *Options) string {
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
 	if len(d.Buffer) < len(%[1]s) {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 	copy(%[1]s[:], d.Buffer[:len(%[1]s)])
 	d.Buffer = d.Buffer[len(%[1]s):]
+	}
 	`, name)
 }
 
 func BuildDecodeArray(name, elemVarName, elemSection string, options *Options) string {
-	return fmt.Sprintf(`
+	return fmt.Sprintf(`{
 	// %[1]s
-	for %[2]s := range %[1]s {
+	for _, %[2]s := range %[1]s {
 		%[3]s
+	}
 	}
 	`, name, elemVarName, elemSection)
 }
@@ -627,7 +637,7 @@ func BuildDecodeByteSlice(name string, options *Options) string {
 	%[3]s
 
 	if len(d.Buffer) < 4 {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	ul, err := d.Uint32()
@@ -637,7 +647,7 @@ func BuildDecodeByteSlice(name string, options *Options) string {
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	%[2]s
@@ -654,7 +664,7 @@ func BuildDecodeSlice(name, elemVarName, elemSection, typeName string, options *
 	%[6]s
 
 	if len(d.Buffer) < 4 {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	ul, err := d.Uint32()
@@ -664,14 +674,14 @@ func BuildDecodeSlice(name, elemVarName, elemSection, typeName string, options *
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	%[5]s
 
 	%[1]s = make(%[4]s, length)
 
-	for %[2]s := range %[1]s {
+	for _, %[2]s := range %[1]s {
 		%[3]s
 	}
 
@@ -685,7 +695,7 @@ func BuildDecodeString(name string, options *Options) string {
 	%[3]s
 
 	if len(d.Buffer) < 4 {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	ul, err := d.Uint32()
@@ -695,7 +705,7 @@ func BuildDecodeString(name string, options *Options) string {
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	%[2]s
@@ -712,7 +722,7 @@ func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, type
 	%[8]s
 
 	if len(d.Buffer) < 4 {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	ul, err := d.Uint32()
@@ -722,7 +732,7 @@ func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, type
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return ErrBufferUnderflow
+		return encoder.ErrBufferUnderflow
 	}
 
 	%[7]s
@@ -742,7 +752,7 @@ func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, type
 func decodeMaxLengthCheck(options *Options) string {
 	if options != nil && options.MaxLength > 0 {
 		return fmt.Sprintf(`if length > %d {
-			return ErrMaxLenExceeded
+			return encoder.ErrMaxLenExceeded
 		}`, options.MaxLength)
 	}
 
