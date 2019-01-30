@@ -262,7 +262,6 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 		for i := 0; i < x.NumFields(); i++ {
 			f := x.Field(i)
 
-			// TODO -- confirm that the original encoder ignores unexported fields
 			if !f.Exported() {
 				continue
 			}

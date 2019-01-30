@@ -20,7 +20,6 @@ import (
 
 - determine if copying an array of bools and int8s is the same as encoding them separately (endianness could be problem)
 - test cases
-- confirm that the original encoder ignores unexported fields
 
 TO DOCUMENT:
 
