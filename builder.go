@@ -220,12 +220,12 @@ func BuildStructEncoder(s *StructInfo, destPackage, fmtFilename string) ([]byte,
 }
 
 func buildEncodeSize(name string, s *types.Struct) ([]byte, error) {
-	section, _, err := buildCodeSectionEncodeSize(s, "obj", nil)
+	section, _, err := buildCodeSectionEncodeSize(s, "obj", "i", 0, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return WrapEncodeSizeFunc(name, section), nil
+	return WrapEncodeSizeFunc(name, "i0", section), nil
 }
 
 func buildEncode(name string, s *types.Struct) ([]byte, error) {
@@ -370,11 +370,8 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 	}
 }
 
-func buildCodeSectionEncodeSize(t types.Type, varName string, options *Options) (string, bool, error) {
-	// castType applies to basic int types; if true, an additional cast will be made in the generated code.
-	// This is to convert types like "type Foo int8" back to int8
-
-	debugPrintf("buildCodeSectionEncodeSize type=%T varName=%s options=%+v\n", t, varName, options)
+func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, depth int, options *Options) (string, bool, error) {
+	debugPrintf("buildCodeSectionEncodeSize type=%T varName=%s baseCounterName=%s depth=%d options=%+v\n", t, varName, baseCounterName, depth, options)
 
 	if options != nil {
 		if options.OmitEmpty && !omitEmptyIsValid(t) {
@@ -382,32 +379,34 @@ func buildCodeSectionEncodeSize(t types.Type, varName string, options *Options) 
 		}
 	}
 
+	counterName := fmt.Sprintf("%s%d", baseCounterName, depth)
+
 	switch x := t.(type) {
 	case *types.Named:
-		return buildCodeSectionEncodeSize(x.Underlying(), varName, options)
+		return buildCodeSectionEncodeSize(x.Underlying(), varName, baseCounterName, depth, options)
 
 	case *types.Basic:
 		switch x.Kind() {
 		case types.Bool:
-			return BuildEncodeSizeBool(varName, options), false, nil
+			return BuildEncodeSizeBool(varName, counterName, options), false, nil
 		case types.Int8:
-			return BuildEncodeSizeInt8(varName, options), false, nil
+			return BuildEncodeSizeInt8(varName, counterName, options), false, nil
 		case types.Int16:
-			return BuildEncodeSizeInt16(varName, options), false, nil
+			return BuildEncodeSizeInt16(varName, counterName, options), false, nil
 		case types.Int32:
-			return BuildEncodeSizeInt32(varName, options), false, nil
+			return BuildEncodeSizeInt32(varName, counterName, options), false, nil
 		case types.Int64:
-			return BuildEncodeSizeInt64(varName, options), false, nil
+			return BuildEncodeSizeInt64(varName, counterName, options), false, nil
 		case types.Uint8:
-			return BuildEncodeSizeUint8(varName, options), false, nil
+			return BuildEncodeSizeUint8(varName, counterName, options), false, nil
 		case types.Uint16:
-			return BuildEncodeSizeUint16(varName, options), false, nil
+			return BuildEncodeSizeUint16(varName, counterName, options), false, nil
 		case types.Uint32:
-			return BuildEncodeSizeUint32(varName, options), false, nil
+			return BuildEncodeSizeUint32(varName, counterName, options), false, nil
 		case types.Uint64:
-			return BuildEncodeSizeUint64(varName, options), false, nil
+			return BuildEncodeSizeUint64(varName, counterName, options), false, nil
 		case types.String:
-			return BuildEncodeSizeString(varName, options), true, nil
+			return BuildEncodeSizeString(varName, counterName, options), true, nil
 		default:
 			return "", false, fmt.Errorf("Unhandled *types.Basic type %q for var %q", x.Name(), varName)
 		}
@@ -416,42 +415,46 @@ func buildCodeSectionEncodeSize(t types.Type, varName string, options *Options) 
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildEncodeSizeByteArray(varName, x.Len(), options), false, nil
+			return BuildEncodeSizeByteArray(varName, counterName, x.Len(), options), false, nil
 		}
 
-		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", nil)
+		nextCounterName := fmt.Sprintf("%s%d", baseCounterName, depth+1)
+		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", baseCounterName, depth+1, nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		return BuildEncodeSizeArray(varName, "x", elemSection, x.Len(), isDynamic, options), isDynamic, nil
+		return BuildEncodeSizeArray(varName, counterName, nextCounterName, "x", elemSection, x.Len(), isDynamic, options), isDynamic, nil
 
 	case *types.Slice:
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildEncodeSizeByteSlice(varName, options), false, nil
+			return BuildEncodeSizeByteSlice(varName, counterName, options), false, nil
 		}
 
-		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", nil)
+		nextCounterName := fmt.Sprintf("%s%d", baseCounterName, depth+1)
+		elemSection, isDynamic, err := buildCodeSectionEncodeSize(elem, "x", baseCounterName, depth+1, nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		return BuildEncodeSizeSlice(varName, "x", elemSection, isDynamic, options), true, nil
+		return BuildEncodeSizeSlice(varName, counterName, nextCounterName, "x", elemSection, isDynamic, options), true, nil
 
 	case *types.Map:
-		keySection, isDynamicKey, err := buildCodeSectionEncodeSize(x.Key(), "k", nil)
+		nextCounterName := fmt.Sprintf("%s%d", baseCounterName, depth+1)
+
+		keySection, isDynamicKey, err := buildCodeSectionEncodeSize(x.Key(), "k", baseCounterName, depth+1, nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		elemSection, isDynamicElem, err := buildCodeSectionEncodeSize(x.Elem(), "v", nil)
+		elemSection, isDynamicElem, err := buildCodeSectionEncodeSize(x.Elem(), "v", baseCounterName, depth+1, nil)
 		if err != nil {
 			return "", false, err
 		}
 
-		return BuildEncodeSizeMap(varName, "k", "v", keySection, elemSection, isDynamicKey, isDynamicElem, options), true, nil
+		return BuildEncodeSizeMap(varName, counterName, nextCounterName, "k", "v", keySection, elemSection, isDynamicKey, isDynamicElem, options), true, nil
 
 	case *types.Struct:
 		isDynamic := false
@@ -481,7 +484,7 @@ func buildCodeSectionEncodeSize(t types.Type, varName string, options *Options) 
 			}
 
 			nextVarName := fmt.Sprintf("%s.%s", varName, f.Name())
-			section, sectionIsDynamic, err := buildCodeSectionEncodeSize(f.Type(), nextVarName, options)
+			section, sectionIsDynamic, err := buildCodeSectionEncodeSize(f.Type(), nextVarName, baseCounterName, depth, options)
 			if err != nil {
 				return "", false, err
 			}

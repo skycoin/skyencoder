@@ -16,87 +16,87 @@ type Options struct {
 
 /* Encode size */
 
-func WrapEncodeSizeFunc(structName, funcBody string) []byte {
+func WrapEncodeSizeFunc(structName, counterName, funcBody string) []byte {
 	return []byte(fmt.Sprintf(`
 // EncodeSize%[1]s computes the size of an encoded object of type %[1]s
 func EncodeSize%[1]s(obj *%[1]s) int {
-	i := 0
+	%[2]s := 0
 
-	%[2]s
+	%[3]s
 
-	return i
+	return %[2]s
 }
-`, structName, funcBody))
+`, structName, counterName, funcBody))
 }
 
-func BuildEncodeSizeBool(name string, options *Options) string {
+func BuildEncodeSizeBool(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i++
-	`, name)
+		%[2]s++
+	`, name, counterName)
 }
 
-func BuildEncodeSizeUint8(name string, options *Options) string {
+func BuildEncodeSizeUint8(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i++
-	`, name)
+		%[2]s++
+	`, name, counterName)
 }
 
-func BuildEncodeSizeUint16(name string, options *Options) string {
+func BuildEncodeSizeUint16(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 2
-	`, name)
+		%[2]s += 2
+	`, name, counterName)
 }
 
-func BuildEncodeSizeUint32(name string, options *Options) string {
+func BuildEncodeSizeUint32(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 4
-	`, name)
+		%[2]s += 4
+	`, name, counterName)
 }
 
-func BuildEncodeSizeUint64(name string, options *Options) string {
+func BuildEncodeSizeUint64(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 8
-	`, name)
+		%[2]s += 8
+	`, name, counterName)
 }
 
-func BuildEncodeSizeInt8(name string, options *Options) string {
+func BuildEncodeSizeInt8(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i++
-	`, name)
+		%[2]s++
+	`, name, counterName)
 }
 
-func BuildEncodeSizeInt16(name string, options *Options) string {
+func BuildEncodeSizeInt16(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 2
-	`, name)
+		%[2]s += 2
+	`, name, counterName)
 }
 
-func BuildEncodeSizeInt32(name string, options *Options) string {
+func BuildEncodeSizeInt32(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 4
-	`, name)
+		%[2]s += 4
+	`, name, counterName)
 }
 
-func BuildEncodeSizeInt64(name string, options *Options) string {
+func BuildEncodeSizeInt64(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
-		i += 8
-	`, name)
+		%[2]s += 8
+	`, name, counterName)
 }
 
-func BuildEncodeSizeString(name string, options *Options) string {
+func BuildEncodeSizeString(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
-	i += 4 + len(%[1]s)
-	`, name)
+	%[2]s += 4 + len(%[1]s)
+	`, name, counterName)
 
 	if options != nil && options.OmitEmpty {
 		return fmt.Sprintf(`
@@ -110,40 +110,55 @@ func BuildEncodeSizeString(name string, options *Options) string {
 	return body
 }
 
-func BuildEncodeSizeByteArray(name string, length int64, options *Options) string {
+func BuildEncodeSizeByteArray(name, counterName string, length int64, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
-	i += %[2]d
-	`, name, length)
+	%[2]s += %[3]d
+	`, name, counterName, length)
 }
 
-func BuildEncodeSizeArray(name, elemVarName, elemSection string, length int64, isDynamic bool, options *Options) string {
+func BuildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemSection string, length int64, isDynamic bool, options *Options) string {
 	if isDynamic {
 		return fmt.Sprintf(`
 		// %[1]s
 		for _, %[2]s := range %[1]s {
+			%[4]s := 0
+
 			%[3]s
+
+			%[5]s += %[4]s
 		}
-		`, name, elemVarName, elemSection)
+		`, name, elemVarName, elemSection, nextCounterName, counterName)
 	}
 
 	return fmt.Sprintf(`
 	// %[1]s
-	i += %[3]d * func() int {
-		i := 0
+	{
+		%[5]s := 0
 
-		%[2]s
+		%[4]s
 
-		return i
-	}()
-	`, name, elemSection, length)
+		%[2]s += %[3]d * %[5]s
+	}
+	`, name, counterName, length, elemSection, nextCounterName)
+
+	// return fmt.Sprintf(`
+	// // %[1]s
+	// i += %[3]d * func() int {
+	// 	i := 0
+
+	// 	%[2]s
+
+	// 	return i
+	// }()
+	// `, name, elemSection, length)
 }
 
-func BuildEncodeSizeByteSlice(name string, options *Options) string {
+func BuildEncodeSizeByteSlice(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
-	i += 4 + len(%[1]s)
-	`, name)
+	%[2]s += 4 + len(%[1]s)
+	`, name, counterName)
 
 	if options != nil && options.OmitEmpty {
 		return fmt.Sprintf(`
@@ -157,28 +172,46 @@ func BuildEncodeSizeByteSlice(name string, options *Options) string {
 	return body
 }
 
-func BuildEncodeSizeSlice(name, elemVarName, elemSection string, isDynamic bool, options *Options) string {
+func BuildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemSection string, isDynamic bool, options *Options) string {
 	var body string
+
+	debugPrintf("BuildEncodeSizeSlice: counterName=%s\n", counterName)
 
 	if isDynamic {
 		body = fmt.Sprintf(`
 		// %[1]s
-		i += 4
-		for _, %[2]s := range %[1]s {
-			%[3]s
+		%[2]s += 4
+		for _, %[3]s := range %[1]s {
+			%[5]s := 0
+
+			%[4]s
+
+			%[2]s += %[5]s
 		}
-		`, name, elemVarName, elemSection)
+		`, name, counterName, elemVarName, elemSection, nextCounterName)
 	} else {
 		body = fmt.Sprintf(`
 		// %[1]s
-		i += 4
-		i += len(%[1]s) * func() int {
-			i := 0
+		%[2]s += 4
+		{
+			%[4]s := 0
 
-			%[2]s
+			%[3]s
 
-			return i
-		}()`, name, elemSection)
+			%[2]s += len(%[1]s) * %[4]s
+		}
+		`, name, counterName, elemSection, nextCounterName)
+
+		// body = fmt.Sprintf(`
+		// // %[1]s
+		// i += 4
+		// i += len(%[1]s) * func() int {
+		// 	i := 0
+
+		// 	%[2]s
+
+		// 	return i
+		// }()`, name, elemSection)
 	}
 
 	if options != nil && options.OmitEmpty {
@@ -193,7 +226,7 @@ func BuildEncodeSizeSlice(name, elemVarName, elemSection string, isDynamic bool,
 	return body
 }
 
-func BuildEncodeSizeMap(name, keyVarName, elemVarName, keySection, elemSection string, isDynamicKey, isDynamicElem bool, options *Options) string {
+func BuildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarName, keySection, elemSection string, isDynamicKey, isDynamicElem bool, options *Options) string {
 	var body string
 
 	if isDynamicKey || isDynamicElem {
@@ -207,27 +240,45 @@ func BuildEncodeSizeMap(name, keyVarName, elemVarName, keySection, elemSection s
 
 		body = fmt.Sprintf(`
 		// %[1]s
-		i += 4
-		for %[2]s, %[3]s := range %[1]s {
-			%[4]s
+		%[2]s += 4
+		for %[3]s, %[4]s := range %[1]s {
+			%[7]s := 0
 
 			%[5]s
+
+			%[6]s
+
+			%[2]s += %[7]s
 		}
-		`, name, keyVarName, elemVarName, keySection, elemSection)
+		`, name, counterName, keyVarName, elemVarName, keySection, elemSection, nextCounterName)
 	} else {
 		body = fmt.Sprintf(`
 		// %[1]s
-		i += 4
-		i += len(%[1]s) * func() int {
-			i := 0
-
-			%[2]s
+		%[2]s += 4
+		{
+			%[5]s := 0
 
 			%[3]s
 
-			return i
-		}()
-		`, name, keySection, elemSection)
+			%[4]s
+
+			%[2]s += len(%[1]s) * %[5]s
+		}
+		`, name, counterName, keySection, elemSection, nextCounterName)
+
+		// body = fmt.Sprintf(`
+		// // %[1]s
+		// i += 4
+		// i += len(%[1]s) * func() int {
+		// 	i := 0
+
+		// 	%[2]s
+
+		// 	%[3]s
+
+		// 	return i
+		// }()
+		// `, name, keySection, elemSection)
 	}
 
 	if options != nil && options.OmitEmpty {

@@ -17,6 +17,7 @@ import (
 
 - test cases
 - nested slices/arrays need to be aware of nesting for the index variable name
+- travis
 
 TO DOCUMENT:
 
