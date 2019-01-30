@@ -25,8 +25,9 @@ TO DOCUMENT:
 
 * If -package flag is used, considers the generated code as a different package from the one in which the struct is defined (even if the name is the same),
 if you want to generate the code in the same package as the struct, do not specify -package.
-
-* Encoder details such as anonymous fields
+- document encoding format
+- document usage in golang (maxlen, omitempty, "-", ignores unexported fields)
+- document cli usage, go generate usage
 
 */
 
