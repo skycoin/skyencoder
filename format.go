@@ -16,6 +16,19 @@ type Options struct {
 
 /* Encode size */
 
+func WrapEncodeSizeFunc(structName, funcBody string) []byte {
+	return []byte(fmt.Sprintf(`
+// EncodeSize%[1]s computes the size of an encoded object of type %[1]s
+func EncodeSize%[1]s(obj *%[1]s) int {
+	i := 0
+
+	%[2]s
+
+	return i
+}
+`, structName, funcBody))
+}
+
 func BuildEncodeSizeBool(name string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
@@ -230,6 +243,17 @@ func BuildEncodeSizeMap(name, keyVarName, elemVarName, keySection, elemSection s
 }
 
 /* Encode */
+
+func WrapEncodeFunc(structName, funcBody string) []byte {
+	return []byte(fmt.Sprintf(`
+// Encode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder
+func Encode%[1]s(e *encoder.Encoder, obj *%[1]s) error {
+	%[2]s
+
+	return nil
+}
+`, structName, funcBody))
+}
 
 func BuildEncodeBool(name string, castType bool, options *Options) string {
 	if castType {
@@ -464,6 +488,21 @@ func encodeMaxLengthCheck(name string, options *Options) string {
 }
 
 /* Decode */
+
+func WrapDecodeFunc(structName, funcBody string) []byte {
+	return []byte(fmt.Sprintf(`
+// Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder
+func Decode%[1]s(d *encoder.Decoder, obj *%[1]s) error {
+	%[2]s
+
+	if len(d.Buffer) != 0 {
+		return encoder.ErrRemainingBytes
+	}
+
+	return nil
+}
+`, structName, funcBody))
+}
 
 func BuildDecodeBool(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
