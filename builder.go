@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"go/build"
 	"go/types"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,7 +15,7 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-const debug = true
+const debug = false
 
 func debugPrintln(args ...interface{}) {
 	if debug {
@@ -93,6 +92,75 @@ func LoadProgram(args, buildTags []string) (*loader.Program, error) {
 	}
 
 	return program, nil
+}
+
+// StructInfo has metadata for a struct type loaded from source
+type StructInfo struct {
+	Name    string
+	Struct  *types.Struct
+	Package *types.Package
+}
+
+// FindStructInfoInProgram finds a matching struct by name from a `*loader.Program`.
+func FindStructInfoInProgram(p *loader.Program, name string) (*StructInfo, error) {
+	// For programs loaded by file, the package will be in p.Created. Look here first
+	for _, pk := range p.Created {
+		s, err := findStructTypeInPackage(pk, name)
+		if err != nil {
+			return nil, err
+		}
+		if s != nil {
+			return &StructInfo{
+				Name:    name,
+				Struct:  s,
+				Package: pk.Pkg,
+			}, nil
+		}
+	}
+
+	// For programs loaded by import path, the package will be in imported
+	for _, pk := range p.Imported {
+		s, err := findStructTypeInPackage(pk, name)
+		if err != nil {
+			return nil, err
+		}
+		if s != nil {
+			return &StructInfo{
+				Name:    name,
+				Struct:  s,
+				Package: pk.Pkg,
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func findStructTypeInPackage(p *loader.PackageInfo, name string) (*types.Struct, error) {
+loop:
+	for _, v := range p.Defs {
+		if v == nil {
+			continue
+		}
+
+		t := v.Type()
+		switch x := t.(type) {
+		case *types.Named:
+			obj := x.Obj()
+			if obj.Name() != name {
+				continue loop
+			}
+			st := x.Underlying()
+			switch y := st.(type) {
+			case *types.Struct:
+				return y, nil
+			default:
+				return nil, fmt.Errorf("Found type with name %s but underlying type is %T, not struct", name, y)
+			}
+		}
+	}
+
+	return nil, nil
 }
 
 // BuildStructEncoder builds formatted source code for encoding/decoding a struct.
@@ -176,83 +244,6 @@ func buildDecode(name string, s *types.Struct, p *types.Package) ([]byte, error)
 	}
 
 	return WrapDecodeFunc(name, section), nil
-}
-
-func isDir(name string) bool {
-	info, err := os.Stat(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return info.IsDir()
-}
-
-// StructInfo has metadata for a struct type loaded from source
-type StructInfo struct {
-	Name    string
-	Struct  *types.Struct
-	Package *types.Package
-}
-
-// FindStructInfoInProgram finds a matching struct by name from a `*loader.Program`.
-func FindStructInfoInProgram(p *loader.Program, name string) (*StructInfo, error) {
-	// For programs loaded by file, the package will be in p.Created. Look here first
-	for _, pk := range p.Created {
-		s, err := findStructTypeInPackage(pk, name)
-		if err != nil {
-			return nil, err
-		}
-		if s != nil {
-			return &StructInfo{
-				Name:    name,
-				Struct:  s,
-				Package: pk.Pkg,
-			}, nil
-		}
-	}
-
-	// For programs loaded by import path, the package will be in imported
-	for _, pk := range p.Imported {
-		s, err := findStructTypeInPackage(pk, name)
-		if err != nil {
-			return nil, err
-		}
-		if s != nil {
-			return &StructInfo{
-				Name:    name,
-				Struct:  s,
-				Package: pk.Pkg,
-			}, nil
-		}
-	}
-
-	return nil, nil
-}
-
-func findStructTypeInPackage(p *loader.PackageInfo, name string) (*types.Struct, error) {
-loop:
-	for _, v := range p.Defs {
-		if v == nil {
-			continue
-		}
-
-		t := v.Type()
-		switch x := t.(type) {
-		case *types.Named:
-			obj := x.Obj()
-			if obj.Name() != name {
-				continue loop
-			}
-			st := x.Underlying()
-			switch y := st.(type) {
-			case *types.Struct:
-				return y, nil
-			default:
-				return nil, fmt.Errorf("Found type with name %s but underlying type is %T, not struct", name, y)
-			}
-		}
-	}
-
-	return nil, nil
 }
 
 func buildCodeSectionEncode(t types.Type, varName string, castType bool, options *Options) (string, error) {
