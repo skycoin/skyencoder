@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go/build"
-	"go/types"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,14 +10,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/golang/tools/go/loader"
 	"github.com/skycoin/skyencoder"
 )
 
 /* TODO
 
-- determine if copying an array of bools and int8s is the same as encoding them separately (endianness could be problem)
 - test cases
+- nested slices/arrays need to be aware of nesting for the index variable name
 
 TO DOCUMENT:
 
@@ -84,38 +81,9 @@ func main() {
 		args = []string{"."}
 	}
 
-	// Load the package with the least restrictive parsing and type checking,
-	// so that a package that doesn't compile can still have a struct declaration extracted
-	buildContext := build.Default
-	buildContext.BuildTags = append(buildContext.BuildTags, tags...)
-
-	cfg := loader.Config{
-		Build:      &buildContext,
-		ParserMode: 0,
-		TypeChecker: types.Config{
-			IgnoreFuncBodies:         true, // ignore functions
-			FakeImportC:              true, // ignore import "C"
-			DisableUnusedImportCheck: true, // ignore unused imports
-		},
-		TypeCheckFuncBodies: func(path string) bool {
-			return false // ignore functions
-		},
-		AllowErrors: true,
-	}
-
-	loadTests := true
-	unused, err := cfg.FromArgs(args, loadTests)
+	program, err := skyencoder.LoadProgram(args, tags)
 	if err != nil {
-		log.Fatal("loader.Config.FromArgs:", err)
-	}
-
-	if len(unused) != 0 {
-		log.Fatal("Not all args consumed by loader.Config.FromArgs. Remaining args:", unused)
-	}
-
-	program, err := cfg.Load()
-	if err != nil {
-		log.Fatal("loader.Config.Load:", err)
+		log.Fatal("skyencoder.LoadProgram failed:", err)
 	}
 
 	debugPrintln("args:", args)

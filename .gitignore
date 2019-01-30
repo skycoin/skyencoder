@@ -11,6 +11,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# compiled binary from go build cmd/skyencoder/
 /skyencoder
 
 vendor/
+
+# temporary output of tests, normally cleaned up from disk
+demo_struct_skyencoder_test.go

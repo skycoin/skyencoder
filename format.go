@@ -121,7 +121,7 @@ func BuildEncodeSizeArray(name, elemVarName, elemSection string, length int64, i
 	if isDynamic {
 		return fmt.Sprintf(`
 		// %[1]s
-		for _, %[2]s = range %[1]s {
+		for _, %[2]s := range %[1]s {
 			%[3]s
 		}
 		`, name, elemVarName, elemSection)
@@ -256,93 +256,102 @@ func Encode%[1]s(e *encoder.Encoder, obj *%[1]s) error {
 }
 
 func BuildEncodeBool(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("bool", name)
+		castName = cast("bool", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Bool(%[1]s)
-	`, name)
+	e.Bool(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeUint8(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("uint8", name)
+		castName = cast("uint8", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Uint8(%[1]s)
-	`, name)
+	e.Uint8(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeUint16(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("uint16", name)
+		castName = cast("uint16", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Uint16(%[1]s)
-	`, name)
+	e.Uint16(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeUint32(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("uint32", name)
+		castName = cast("uint32", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Uint32(%[1]s)
-	`, name)
+	e.Uint32(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeUint64(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("uint64", name)
+		castName = cast("uint64", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Uint64(%[1]s)
-	`, name)
+	e.Uint64(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeInt8(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("int8", name)
+		castName = cast("int8", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Int8(%[1]s)
-	`, name)
+	e.Int8(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeInt16(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("int16", name)
+		castName = cast("int16", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Int16(%[1]s)
-	`, name)
+	e.Int16(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeInt32(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("int32", name)
+		castName = cast("int32", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Int32(%[1]s)
-	`, name)
+	e.Int32(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeInt64(name string, castType bool, options *Options) string {
+	castName := name
 	if castType {
-		name = cast("int64", name)
+		castName = cast("int64", name)
 	}
 	return fmt.Sprintf(`
 	// %[1]s
-	e.Int64(%[1]s)
-	`, name)
+	e.Int64(%[2]s)
+	`, name, castName)
 }
 
 func BuildEncodeString(name string, options *Options) string {
@@ -442,6 +451,13 @@ func BuildEncodeSlice(name, elemVarName, elemSection string, options *Options) s
 }
 
 func BuildEncodeMap(name, keyVarName, elemVarName, keySection, elemSection string, options *Options) string {
+	if keySection == "" {
+		keyVarName = "_"
+	}
+	if elemSection == "" {
+		elemVarName = "_"
+	}
+
 	body := fmt.Sprintf(`
 	// %[1]s
 
@@ -659,14 +675,14 @@ func BuildDecodeByteArray(name string, options *Options) string {
 	`, name)
 }
 
-func BuildDecodeArray(name, elemVarName, elemSection string, options *Options) string {
+func BuildDecodeArray(name, elemCounterName, elemVarName, elemSection string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
-	for _, %[2]s := range %[1]s {
-		%[3]s
+	for %[2]s := range %[1]s {
+		%[4]s
 	}
 	}
-	`, name, elemVarName, elemSection)
+	`, name, elemCounterName, elemVarName, elemSection)
 }
 
 func BuildDecodeByteSlice(name string, options *Options) string {
@@ -696,11 +712,11 @@ func BuildDecodeByteSlice(name string, options *Options) string {
 	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
-func BuildDecodeSlice(name, elemVarName, elemSection, typeName string, options *Options) string {
+func BuildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 
-	%[6]s
+	%[7]s
 
 	if len(d.Buffer) < 4 {
 		return encoder.ErrBufferUnderflow
@@ -716,15 +732,15 @@ func BuildDecodeSlice(name, elemVarName, elemSection, typeName string, options *
 		return encoder.ErrBufferUnderflow
 	}
 
-	%[5]s
+	%[6]s
 
-	%[1]s = make(%[4]s, length)
+	%[1]s = make(%[5]s, length)
 
-	for _, %[2]s := range %[1]s {
-		%[3]s
+	for %[2]s := range %[1]s {
+		%[4]s
 	}
 
-	}`, name, elemVarName, elemSection, typeName, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
+	}`, name, elemCounterName, elemVarName, elemSection, typeName, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
 func BuildDecodeString(name string, options *Options) string {
@@ -778,7 +794,7 @@ func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, type
 
 	%[1]s = make(%[6]s)
 
-	for i := 0; i < length; i++ {
+	for %[2]s, %[3]s := range %[1]s {
 		%[4]s
 
 		%[5]s
