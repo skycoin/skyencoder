@@ -17,4 +17,4 @@
 vendor/
 
 # temporary output of tests, normally cleaned up from disk
-demo_struct_skyencoder_test.go
+*_skyencoder_test.go
