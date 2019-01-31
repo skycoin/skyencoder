@@ -206,3 +206,54 @@ func TestBuildSkycoinSignedBlock(t *testing.T) {
 
 	verifyProgramCompiles(t, importPath)
 }
+
+func testBuildCodeFails(t *testing.T, structName, filename string) {
+	program, err := LoadProgram([]string{"."}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sInfo, err := FindStructInfoInProgram(program, structName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = BuildStructEncoder(sInfo, "", filename)
+	if err == nil {
+		t.Fatal("Expected BuildStructEncoder error")
+	}
+}
+
+type MaxLenInt struct {
+	Int64 int64 `enc:",maxlen=4"`
+}
+
+func TestBuildMaxLenInt(t *testing.T) {
+	testBuildCodeFails(t, "MaxLenInt", "./max_len_int_skyencoder_test.go")
+}
+
+type MaxLenInvalid struct {
+	String string `enc:",maxlen=foo"`
+}
+
+func TestBuildMaxLenInvalid(t *testing.T) {
+	testBuildCodeFails(t, "MaxLenInvalid", "./max_len_invalid_skyencoder_test.go")
+}
+
+type OmitEmptyInt struct {
+	Int64 int64 `enc:',omitempty"`
+}
+
+func TestBuildOmitEmptyInt(t *testing.T) {
+	testBuildCodeFails(t, "OmitEmptyInt", "./omit_empty_int_skyencoder_test.go")
+}
+
+type OmitEmptyNotFinal struct {
+	Int64  int64
+	Extra  []byte `enc:",omitempty"`
+	String string
+}
+
+func TestBuildOmitEmptyNotFinal(t *testing.T) {
+	testBuildCodeFails(t, "OmitEmptyNotFinal", "./omit_empty_not_final_skyencoder_test.go")
+}

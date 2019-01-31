@@ -16,19 +16,13 @@ import (
 /* TODO
 
 - benchmark results against the encoder
-- travis
-- test cases using skycoin objects (basic test in here, most tests in skycoin)
 - add go:generate in skycoin
 - add skycoin tests (verify entire db can be loaded)
 
 TO DOCUMENT:
 
-* If -package flag is used, considers the generated code as a different package from the one in which the struct is defined (even if the name is the same),
-if you want to generate the code in the same package as the struct, do not specify -package.
-- document encoding format
-- document usage in golang (maxlen, omitempty, "-", ignores unexported fields)
-- document cli usage, go generate usage
-- document install instructions
+- (wiki) document encoding format
+- (wiki) document usage in golang (maxlen, omitempty, "-", ignores unexported fields)
 
 */
 
@@ -47,10 +41,11 @@ func debugPrintf(msg string, args ...interface{}) {
 }
 
 var (
-	structName  = flag.String("struct", "", "struct name, must be set")
-	output      = flag.String("output", "", "output file name; default srcdir/<struct_name>_skyencoder.go")
-	buildTags   = flag.String("tags", "", "comma-separated list of build tags to apply")
-	destPackage = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
+	structName     = flag.String("struct", "", "struct name, must be set")
+	outputFilename = flag.String("output-file", "", "output file name; default <struct_name>_skyencoder.go")
+	outputPath     = flag.String("output-path", "", "output path; defaults to the package's path, or the file's containing folder")
+	buildTags      = flag.String("tags", "", "comma-separated list of build tags to apply")
+	destPackage    = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
 )
 
 func usage() {
@@ -129,13 +124,18 @@ func main() {
 
 	debugPrintln(string(src))
 
-	outputFn := *output
+	outputFn := *outputFilename
 	if outputFn == "" {
 		// If the input is a filename, put next to the file
 		// If the input is a package, put in the package
-		fn := fmt.Sprintf("%s_skyencoder.go", toSnakeCase(*structName))
-		outputFn = filepath.Join(destPath, fn)
+		outputFn = fmt.Sprintf("%s_skyencoder.go", toSnakeCase(*structName))
 	}
+
+	outputPth := *outputPath
+	if outputPth == "" {
+		outputPth = destPath
+	}
+	outputFn = filepath.Join(outputPth, outputFn)
 
 	if err := ioutil.WriteFile(outputFn, src, 0644); err != nil {
 		log.Fatal("ioutil.WriteFile failed:", err)
