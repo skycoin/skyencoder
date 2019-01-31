@@ -16,87 +16,93 @@ type Options struct {
 
 /* Encode size */
 
-func WrapEncodeSizeFunc(structName, structPackageName, counterName, funcBody string) []byte {
-	structType := structName
-	if structPackageName != "" {
-		structType = fmt.Sprintf("%s.%s", structPackageName, structName)
+func wrapEncodeSizeFunc(typeName, typePackageName, counterName, funcBody string, usePointerArg bool) []byte {
+	fullTypeName := typeName
+	if typePackageName != "" {
+		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, typeName)
 	}
+
+	pointerArg := ""
+	if usePointerArg {
+		pointerArg = "*"
+	}
+
 	return []byte(fmt.Sprintf(`
 // EncodeSize%[1]s computes the size of an encoded object of type %[1]s
-func EncodeSize%[1]s(obj *%[4]s) int {
+func EncodeSize%[1]s(obj %[5]s%[4]s) int {
 	%[2]s := 0
 
 	%[3]s
 
 	return %[2]s
 }
-`, structName, counterName, funcBody, structType))
+`, typeName, counterName, funcBody, fullTypeName, pointerArg))
 }
 
-func BuildEncodeSizeBool(name, counterName string, options *Options) string {
+func buildEncodeSizeBool(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s++
 	`, name, counterName)
 }
 
-func BuildEncodeSizeUint8(name, counterName string, options *Options) string {
+func buildEncodeSizeUint8(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s++
 	`, name, counterName)
 }
 
-func BuildEncodeSizeUint16(name, counterName string, options *Options) string {
+func buildEncodeSizeUint16(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s += 2
 	`, name, counterName)
 }
 
-func BuildEncodeSizeUint32(name, counterName string, options *Options) string {
+func buildEncodeSizeUint32(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s += 4
 	`, name, counterName)
 }
 
-func BuildEncodeSizeUint64(name, counterName string, options *Options) string {
+func buildEncodeSizeUint64(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s += 8
 	`, name, counterName)
 }
 
-func BuildEncodeSizeInt8(name, counterName string, options *Options) string {
+func buildEncodeSizeInt8(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s++
 	`, name, counterName)
 }
 
-func BuildEncodeSizeInt16(name, counterName string, options *Options) string {
+func buildEncodeSizeInt16(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s += 2
 	`, name, counterName)
 }
 
-func BuildEncodeSizeInt32(name, counterName string, options *Options) string {
+func buildEncodeSizeInt32(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s += 4
 	`, name, counterName)
 }
 
-func BuildEncodeSizeInt64(name, counterName string, options *Options) string {
+func buildEncodeSizeInt64(name, counterName string, options *Options) string {
 	return fmt.Sprintf(`
 		// %[1]s
 		%[2]s += 8
 	`, name, counterName)
 }
 
-func BuildEncodeSizeString(name, counterName string, options *Options) string {
+func buildEncodeSizeString(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
 	%[2]s += 4 + len(%[1]s)
@@ -114,14 +120,14 @@ func BuildEncodeSizeString(name, counterName string, options *Options) string {
 	return body
 }
 
-func BuildEncodeSizeByteArray(name, counterName string, length int64, options *Options) string {
+func buildEncodeSizeByteArray(name, counterName string, length int64, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
 	%[2]s += %[3]d
 	`, name, counterName, length)
 }
 
-func BuildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemSection string, length int64, isDynamic bool, options *Options) string {
+func buildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemSection string, length int64, isDynamic bool, options *Options) string {
 	if isDynamic {
 		return fmt.Sprintf(`
 		// %[1]s
@@ -158,7 +164,7 @@ func BuildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemS
 	// `, name, elemSection, length)
 }
 
-func BuildEncodeSizeByteSlice(name, counterName string, options *Options) string {
+func buildEncodeSizeByteSlice(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
 	%[2]s += 4 + len(%[1]s)
@@ -176,7 +182,7 @@ func BuildEncodeSizeByteSlice(name, counterName string, options *Options) string
 	return body
 }
 
-func BuildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemSection string, isDynamic bool, options *Options) string {
+func buildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemSection string, isDynamic bool, options *Options) string {
 	var body string
 
 	debugPrintf("BuildEncodeSizeSlice: counterName=%s\n", counterName)
@@ -230,7 +236,7 @@ func BuildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemS
 	return body
 }
 
-func BuildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarName, keySection, elemSection string, isDynamicKey, isDynamicElem bool, options *Options) string {
+func buildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarName, keySection, elemSection string, isDynamicKey, isDynamicElem bool, options *Options) string {
 	var body string
 
 	if isDynamicKey || isDynamicElem {
@@ -299,22 +305,28 @@ func BuildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarN
 
 /* Encode */
 
-func WrapEncodeFunc(structName, structPackageName, funcBody string) []byte {
-	structType := structName
-	if structPackageName != "" {
-		structType = fmt.Sprintf("%s.%s", structPackageName, structType)
+func wrapEncodeFunc(typeName, typePackageName, funcBody string, usePointerArg bool) []byte {
+	fullTypeName := typeName
+	if typePackageName != "" {
+		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, fullTypeName)
 	}
+
+	pointerArg := ""
+	if usePointerArg {
+		pointerArg = "*"
+	}
+
 	return []byte(fmt.Sprintf(`
 // Encode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder
-func Encode%[1]s(e *encoder.Encoder, obj *%[3]s) error {
+func Encode%[1]s(e *encoder.Encoder, obj %[4]s%[3]s) error {
 	%[2]s
 
 	return nil
 }
-`, structName, funcBody, structType))
+`, typeName, funcBody, fullTypeName, pointerArg))
 }
 
-func BuildEncodeBool(name string, castType bool, options *Options) string {
+func buildEncodeBool(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("bool", name)
@@ -325,7 +337,7 @@ func BuildEncodeBool(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeUint8(name string, castType bool, options *Options) string {
+func buildEncodeUint8(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("uint8", name)
@@ -336,7 +348,7 @@ func BuildEncodeUint8(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeUint16(name string, castType bool, options *Options) string {
+func buildEncodeUint16(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("uint16", name)
@@ -347,7 +359,7 @@ func BuildEncodeUint16(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeUint32(name string, castType bool, options *Options) string {
+func buildEncodeUint32(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("uint32", name)
@@ -358,7 +370,7 @@ func BuildEncodeUint32(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeUint64(name string, castType bool, options *Options) string {
+func buildEncodeUint64(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("uint64", name)
@@ -369,7 +381,7 @@ func BuildEncodeUint64(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeInt8(name string, castType bool, options *Options) string {
+func buildEncodeInt8(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("int8", name)
@@ -380,7 +392,7 @@ func BuildEncodeInt8(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeInt16(name string, castType bool, options *Options) string {
+func buildEncodeInt16(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("int16", name)
@@ -391,7 +403,7 @@ func BuildEncodeInt16(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeInt32(name string, castType bool, options *Options) string {
+func buildEncodeInt32(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("int32", name)
@@ -402,7 +414,7 @@ func BuildEncodeInt32(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeInt64(name string, castType bool, options *Options) string {
+func buildEncodeInt64(name string, castType bool, options *Options) string {
 	castName := name
 	if castType {
 		castName = cast("int64", name)
@@ -413,7 +425,7 @@ func BuildEncodeInt64(name string, castType bool, options *Options) string {
 	`, name, castName)
 }
 
-func BuildEncodeString(name string, options *Options) string {
+func buildEncodeString(name string, options *Options) string {
 	body := fmt.Sprintf(`
 	%[2]s
 
@@ -438,14 +450,14 @@ func BuildEncodeString(name string, options *Options) string {
 	return body
 }
 
-func BuildEncodeByteArray(name string, options *Options) string {
+func buildEncodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
 	e.CopyBytes(%[1]s[:])
 	`, name)
 }
 
-func BuildEncodeArray(name, elemVarName, elemSection string, options *Options) string {
+func buildEncodeArray(name, elemVarName, elemSection string, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
 	for _, %[2]s := range %[1]s {
@@ -454,7 +466,7 @@ func BuildEncodeArray(name, elemVarName, elemSection string, options *Options) s
 	`, name, elemVarName, elemSection)
 }
 
-func BuildEncodeByteSlice(name string, options *Options) string {
+func buildEncodeByteSlice(name string, options *Options) string {
 	body := fmt.Sprintf(`
 	%[2]s
 
@@ -482,7 +494,7 @@ func BuildEncodeByteSlice(name string, options *Options) string {
 	return body
 }
 
-func BuildEncodeSlice(name, elemVarName, elemSection string, options *Options) string {
+func buildEncodeSlice(name, elemVarName, elemSection string, options *Options) string {
 	body := fmt.Sprintf(`
 	%[4]s
 
@@ -512,7 +524,7 @@ func BuildEncodeSlice(name, elemVarName, elemSection string, options *Options) s
 	return body
 }
 
-func BuildEncodeMap(name, keyVarName, elemVarName, keySection, elemSection string, options *Options) string {
+func buildEncodeMap(name, keyVarName, elemVarName, keySection, elemSection string, options *Options) string {
 	if keySection == "" {
 		keyVarName = "_"
 	}
@@ -567,14 +579,20 @@ func encodeMaxLengthCheck(name string, options *Options) string {
 
 /* Decode */
 
-func WrapDecodeFunc(structName, structPackageName, funcBody string) []byte {
-	structType := structName
-	if structPackageName != "" {
-		structType = fmt.Sprintf("%s.%s", structPackageName, structName)
+func wrapDecodeFunc(typeName, typePackageName, funcBody string, usePointerArg bool) []byte {
+	fullTypeName := typeName
+	if typePackageName != "" {
+		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, typeName)
 	}
+
+	pointerArg := ""
+	if usePointerArg {
+		pointerArg = "*"
+	}
+
 	return []byte(fmt.Sprintf(`
 // Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder
-func Decode%[1]s(d *encoder.Decoder, obj *%[3]s) error {
+func Decode%[1]s(d *encoder.Decoder, obj %[4]s%[3]s) error {
 	%[2]s
 
 	if len(d.Buffer) != 0 {
@@ -583,10 +601,10 @@ func Decode%[1]s(d *encoder.Decoder, obj *%[3]s) error {
 
 	return nil
 }
-`, structName, funcBody, structType))
+`, typeName, funcBody, fullTypeName, pointerArg))
 }
 
-func BuildDecodeBool(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeBool(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -602,7 +620,7 @@ func BuildDecodeBool(name string, castType bool, typeName string, options *Optio
 	`, name, assign)
 }
 
-func BuildDecodeUint8(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeUint8(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -617,7 +635,7 @@ func BuildDecodeUint8(name string, castType bool, typeName string, options *Opti
 	}`, name, assign)
 }
 
-func BuildDecodeUint16(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeUint16(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -633,7 +651,7 @@ func BuildDecodeUint16(name string, castType bool, typeName string, options *Opt
 	`, name, assign)
 }
 
-func BuildDecodeUint32(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeUint32(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -649,7 +667,7 @@ func BuildDecodeUint32(name string, castType bool, typeName string, options *Opt
 	`, name, assign)
 }
 
-func BuildDecodeUint64(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeUint64(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -665,7 +683,7 @@ func BuildDecodeUint64(name string, castType bool, typeName string, options *Opt
 	`, name, assign)
 }
 
-func BuildDecodeInt8(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeInt8(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -681,7 +699,7 @@ func BuildDecodeInt8(name string, castType bool, typeName string, options *Optio
 	`, name, assign)
 }
 
-func BuildDecodeInt16(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeInt16(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -697,7 +715,7 @@ func BuildDecodeInt16(name string, castType bool, typeName string, options *Opti
 	`, name, assign)
 }
 
-func BuildDecodeInt32(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeInt32(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -713,7 +731,7 @@ func BuildDecodeInt32(name string, castType bool, typeName string, options *Opti
 	`, name, assign)
 }
 
-func BuildDecodeInt64(name string, castType bool, typeName string, options *Options) string {
+func buildDecodeInt64(name string, castType bool, typeName string, options *Options) string {
 	assign := "i"
 	if castType {
 		assign = cast(typeName, assign)
@@ -729,7 +747,7 @@ func BuildDecodeInt64(name string, castType bool, typeName string, options *Opti
 	`, name, assign)
 }
 
-func BuildDecodeByteArray(name string, options *Options) string {
+func buildDecodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 	if len(d.Buffer) < len(%[1]s) {
@@ -741,7 +759,7 @@ func BuildDecodeByteArray(name string, options *Options) string {
 	`, name)
 }
 
-func BuildDecodeArray(name, elemCounterName, elemVarName, elemSection string, options *Options) string {
+func buildDecodeArray(name, elemCounterName, elemVarName, elemSection string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 	for %[2]s := range %[1]s {
@@ -751,7 +769,7 @@ func BuildDecodeArray(name, elemCounterName, elemVarName, elemSection string, op
 	`, name, elemCounterName, elemVarName, elemSection)
 }
 
-func BuildDecodeByteSlice(name string, options *Options) string {
+func buildDecodeByteSlice(name string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 
@@ -779,7 +797,7 @@ func BuildDecodeByteSlice(name string, options *Options) string {
 	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
-func BuildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName string, options *Options) string {
+func buildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 
@@ -810,7 +828,7 @@ func BuildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName 
 	}`, name, elemCounterName, elemVarName, elemSection, typeName, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
-func BuildDecodeString(name string, options *Options) string {
+func buildDecodeString(name string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 
@@ -837,7 +855,7 @@ func BuildDecodeString(name string, options *Options) string {
 	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
-func BuildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, typeName string, options *Options) string {
+func buildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, typeName string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 

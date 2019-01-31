@@ -213,6 +213,15 @@ func BuildTypeEncoder(s *TypeInfo, destPackage, fmtFilename string) ([]byte, err
 	return fmtSrc, nil
 }
 
+func shouldUsePointerArg(s *TypeInfo) bool {
+	switch s.Type.(type) {
+	case *types.Struct:
+		return true
+	default:
+		return false
+	}
+}
+
 func buildEncodeSize(s *TypeInfo, externalPackage bool) ([]byte, error) {
 	section, _, err := buildCodeSectionEncodeSize(s.Type, "obj", "i", 0, nil)
 	if err != nil {
@@ -224,7 +233,7 @@ func buildEncodeSize(s *TypeInfo, externalPackage bool) ([]byte, error) {
 		pkgName = s.Package.Name()
 	}
 
-	return WrapEncodeSizeFunc(s.Name, pkgName, "i0", section), nil
+	return wrapEncodeSizeFunc(s.Name, pkgName, "i0", section, shouldUsePointerArg(s)), nil
 }
 
 func buildEncode(s *TypeInfo, externalPackage bool) ([]byte, error) {
@@ -238,7 +247,7 @@ func buildEncode(s *TypeInfo, externalPackage bool) ([]byte, error) {
 		pkgName = s.Package.Name()
 	}
 
-	return WrapEncodeFunc(s.Name, pkgName, section), nil
+	return wrapEncodeFunc(s.Name, pkgName, section, shouldUsePointerArg(s)), nil
 }
 
 func buildDecode(s *TypeInfo, p *types.Package, externalPackage bool) ([]byte, error) {
@@ -252,7 +261,7 @@ func buildDecode(s *TypeInfo, p *types.Package, externalPackage bool) ([]byte, e
 		pkgName = s.Package.Name()
 	}
 
-	return WrapDecodeFunc(s.Name, pkgName, section), nil
+	return wrapDecodeFunc(s.Name, pkgName, section, shouldUsePointerArg(s)), nil
 }
 
 func buildCodeSectionEncode(t types.Type, varName string, castType bool, options *Options) (string, error) {
@@ -274,25 +283,25 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 	case *types.Basic:
 		switch x.Kind() {
 		case types.Bool:
-			return BuildEncodeBool(varName, castType, options), nil
+			return buildEncodeBool(varName, castType, options), nil
 		case types.Int8:
-			return BuildEncodeInt8(varName, castType, options), nil
+			return buildEncodeInt8(varName, castType, options), nil
 		case types.Int16:
-			return BuildEncodeInt16(varName, castType, options), nil
+			return buildEncodeInt16(varName, castType, options), nil
 		case types.Int32:
-			return BuildEncodeInt32(varName, castType, options), nil
+			return buildEncodeInt32(varName, castType, options), nil
 		case types.Int64:
-			return BuildEncodeInt64(varName, castType, options), nil
+			return buildEncodeInt64(varName, castType, options), nil
 		case types.Uint8:
-			return BuildEncodeUint8(varName, castType, options), nil
+			return buildEncodeUint8(varName, castType, options), nil
 		case types.Uint16:
-			return BuildEncodeUint16(varName, castType, options), nil
+			return buildEncodeUint16(varName, castType, options), nil
 		case types.Uint32:
-			return BuildEncodeUint32(varName, castType, options), nil
+			return buildEncodeUint32(varName, castType, options), nil
 		case types.Uint64:
-			return BuildEncodeUint64(varName, castType, options), nil
+			return buildEncodeUint64(varName, castType, options), nil
 		case types.String:
-			return BuildEncodeString(varName, options), nil
+			return buildEncodeString(varName, options), nil
 		default:
 			return "", fmt.Errorf("Unhandled *types.Basic type %s for var %s", x.Name(), varName)
 		}
@@ -301,7 +310,7 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildEncodeByteArray(varName, options), nil
+			return buildEncodeByteArray(varName, options), nil
 		}
 
 		elemSection, err := buildCodeSectionEncode(elem, "x", false, nil)
@@ -309,13 +318,13 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 			return "", err
 		}
 
-		return BuildEncodeArray(varName, "x", elemSection, options), nil
+		return buildEncodeArray(varName, "x", elemSection, options), nil
 
 	case *types.Slice:
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildEncodeByteSlice(varName, options), nil
+			return buildEncodeByteSlice(varName, options), nil
 		}
 
 		elemSection, err := buildCodeSectionEncode(elem, "x", false, nil)
@@ -323,7 +332,7 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 			return "", err
 		}
 
-		return BuildEncodeSlice(varName, "x", elemSection, options), nil
+		return buildEncodeSlice(varName, "x", elemSection, options), nil
 
 	case *types.Map:
 		keySection, err := buildCodeSectionEncode(x.Key(), "k", false, nil)
@@ -336,7 +345,7 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 			return "", err
 		}
 
-		return BuildEncodeMap(varName, "k", "v", keySection, elemSection, options), nil
+		return buildEncodeMap(varName, "k", "v", keySection, elemSection, options), nil
 
 	case *types.Struct:
 		sections := make([]string, x.NumFields())
@@ -397,25 +406,25 @@ func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, d
 	case *types.Basic:
 		switch x.Kind() {
 		case types.Bool:
-			return BuildEncodeSizeBool(varName, counterName, options), false, nil
+			return buildEncodeSizeBool(varName, counterName, options), false, nil
 		case types.Int8:
-			return BuildEncodeSizeInt8(varName, counterName, options), false, nil
+			return buildEncodeSizeInt8(varName, counterName, options), false, nil
 		case types.Int16:
-			return BuildEncodeSizeInt16(varName, counterName, options), false, nil
+			return buildEncodeSizeInt16(varName, counterName, options), false, nil
 		case types.Int32:
-			return BuildEncodeSizeInt32(varName, counterName, options), false, nil
+			return buildEncodeSizeInt32(varName, counterName, options), false, nil
 		case types.Int64:
-			return BuildEncodeSizeInt64(varName, counterName, options), false, nil
+			return buildEncodeSizeInt64(varName, counterName, options), false, nil
 		case types.Uint8:
-			return BuildEncodeSizeUint8(varName, counterName, options), false, nil
+			return buildEncodeSizeUint8(varName, counterName, options), false, nil
 		case types.Uint16:
-			return BuildEncodeSizeUint16(varName, counterName, options), false, nil
+			return buildEncodeSizeUint16(varName, counterName, options), false, nil
 		case types.Uint32:
-			return BuildEncodeSizeUint32(varName, counterName, options), false, nil
+			return buildEncodeSizeUint32(varName, counterName, options), false, nil
 		case types.Uint64:
-			return BuildEncodeSizeUint64(varName, counterName, options), false, nil
+			return buildEncodeSizeUint64(varName, counterName, options), false, nil
 		case types.String:
-			return BuildEncodeSizeString(varName, counterName, options), true, nil
+			return buildEncodeSizeString(varName, counterName, options), true, nil
 		default:
 			return "", false, fmt.Errorf("Unhandled *types.Basic type %q for var %q", x.Name(), varName)
 		}
@@ -424,7 +433,7 @@ func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, d
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildEncodeSizeByteArray(varName, counterName, x.Len(), options), false, nil
+			return buildEncodeSizeByteArray(varName, counterName, x.Len(), options), false, nil
 		}
 
 		nextCounterName := fmt.Sprintf("%s%d", baseCounterName, depth+1)
@@ -433,13 +442,13 @@ func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, d
 			return "", false, err
 		}
 
-		return BuildEncodeSizeArray(varName, counterName, nextCounterName, "x", elemSection, x.Len(), isDynamic, options), isDynamic, nil
+		return buildEncodeSizeArray(varName, counterName, nextCounterName, "x", elemSection, x.Len(), isDynamic, options), isDynamic, nil
 
 	case *types.Slice:
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildEncodeSizeByteSlice(varName, counterName, options), false, nil
+			return buildEncodeSizeByteSlice(varName, counterName, options), false, nil
 		}
 
 		nextCounterName := fmt.Sprintf("%s%d", baseCounterName, depth+1)
@@ -448,7 +457,7 @@ func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, d
 			return "", false, err
 		}
 
-		return BuildEncodeSizeSlice(varName, counterName, nextCounterName, "x", elemSection, isDynamic, options), true, nil
+		return buildEncodeSizeSlice(varName, counterName, nextCounterName, "x", elemSection, isDynamic, options), true, nil
 
 	case *types.Map:
 		nextCounterName := fmt.Sprintf("%s%d", baseCounterName, depth+1)
@@ -463,7 +472,7 @@ func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, d
 			return "", false, err
 		}
 
-		return BuildEncodeSizeMap(varName, counterName, nextCounterName, "k", "v", keySection, elemSection, isDynamicKey, isDynamicElem, options), true, nil
+		return buildEncodeSizeMap(varName, counterName, nextCounterName, "k", "v", keySection, elemSection, isDynamicKey, isDynamicElem, options), true, nil
 
 	case *types.Struct:
 		isDynamic := false
@@ -541,25 +550,25 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 
 		switch x.Kind() {
 		case types.Bool:
-			return BuildDecodeBool(varName, castType, typeName, options), nil
+			return buildDecodeBool(varName, castType, typeName, options), nil
 		case types.Int8:
-			return BuildDecodeInt8(varName, castType, typeName, options), nil
+			return buildDecodeInt8(varName, castType, typeName, options), nil
 		case types.Int16:
-			return BuildDecodeInt16(varName, castType, typeName, options), nil
+			return buildDecodeInt16(varName, castType, typeName, options), nil
 		case types.Int32:
-			return BuildDecodeInt32(varName, castType, typeName, options), nil
+			return buildDecodeInt32(varName, castType, typeName, options), nil
 		case types.Int64:
-			return BuildDecodeInt64(varName, castType, typeName, options), nil
+			return buildDecodeInt64(varName, castType, typeName, options), nil
 		case types.Uint8:
-			return BuildDecodeUint8(varName, castType, typeName, options), nil
+			return buildDecodeUint8(varName, castType, typeName, options), nil
 		case types.Uint16:
-			return BuildDecodeUint16(varName, castType, typeName, options), nil
+			return buildDecodeUint16(varName, castType, typeName, options), nil
 		case types.Uint32:
-			return BuildDecodeUint32(varName, castType, typeName, options), nil
+			return buildDecodeUint32(varName, castType, typeName, options), nil
 		case types.Uint64:
-			return BuildDecodeUint64(varName, castType, typeName, options), nil
+			return buildDecodeUint64(varName, castType, typeName, options), nil
 		case types.String:
-			return BuildDecodeString(varName, options), nil
+			return buildDecodeString(varName, options), nil
 		default:
 			return "", fmt.Errorf("Unhandled *types.Basic type %s for var %s", x.Name(), varName)
 		}
@@ -568,7 +577,7 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildDecodeByteArray(varName, options), nil
+			return buildDecodeByteArray(varName, options), nil
 		}
 
 		elemCounterName := fmt.Sprintf("z%d", depth)
@@ -578,13 +587,13 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 			return "", err
 		}
 
-		return BuildDecodeArray(varName, elemCounterName, elemVarName, elemSection, options), nil
+		return buildDecodeArray(varName, elemCounterName, elemVarName, elemSection, options), nil
 
 	case *types.Slice:
 		elem := x.Elem()
 
 		if isByte(elem) {
-			return BuildDecodeByteSlice(varName, options), nil
+			return buildDecodeByteSlice(varName, options), nil
 		}
 
 		elemCounterName := fmt.Sprintf("z%d", depth)
@@ -594,7 +603,7 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 			return "", err
 		}
 
-		return BuildDecodeSlice(varName, elemCounterName, elemVarName, elemSection, sliceTypeName(x, p), options), nil
+		return buildDecodeSlice(varName, elemCounterName, elemVarName, elemSection, sliceTypeName(x, p), options), nil
 
 	case *types.Map:
 		keyVarName := fmt.Sprintf("k%d", depth)
@@ -609,7 +618,7 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 			return "", err
 		}
 
-		return BuildDecodeMap(varName, keyVarName, elemVarName, keySection, elemSection, mapTypeName(x, p), options), nil
+		return buildDecodeMap(varName, keyVarName, elemVarName, keySection, elemSection, mapTypeName(x, p), options), nil
 
 	case *types.Struct:
 		sections := make([]string, x.NumFields())
