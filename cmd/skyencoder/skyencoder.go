@@ -122,7 +122,7 @@ func main() {
 		fmtFilename = filepath.Join(args[0], "foo123123123123999.go")
 	}
 
-	src, err := skyencoder.BuildStructEncoder(*structName, sInfo, *destPackage, fmtFilename)
+	src, err := skyencoder.BuildStructEncoder(sInfo, *destPackage, fmtFilename)
 	if err != nil {
 		log.Fatal("skyencoder.BuildStructEncoder failed:", err)
 	}

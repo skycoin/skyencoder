@@ -1,0 +1,14 @@
+sudo: required
+dist: trusty
+language: go
+go:
+  - "1.11.x"
+  - tip
+
+install:
+  - go get -t github.com/skycoin/skyencoder/...
+  - go install github.com/skycoin/skyencoder/cmd/skyencoder
+
+script:
+  - go test .
+  - skyencoder -struct DemoStruct github.com/skycoin/skyencoder
