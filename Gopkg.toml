@@ -31,10 +31,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/golang/tools"
-
-[[constraint]]
-  branch = "master"
   name = "golang.org/x/tools"
 
 [prune]

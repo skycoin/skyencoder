@@ -11,15 +11,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:55a446b47ecca4df6628b642f3f661355eb80e16aa5bfe2deae2c78617bd2465"
-  name = "github.com/golang/tools"
-  packages = ["go/loader"]
-  pruneopts = "UT"
-  revision = "a06a922acc1b97001c51689385e2144227c9e820"
-
-[[projects]]
-  branch = "master"
-  digest = "1:eb9fd5ad5b7d78c24b20ccc9d32c901b0ede97c2c417c8c47b043800ca800a2b"
+  digest = "1:bcc7ca488b127d6dfd829f57a5091c88cc68c81bf249fd342144ce2076706823"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -28,6 +20,7 @@
     "go/internal/cgo",
     "go/internal/gcimporter",
     "go/internal/packagesdriver",
+    "go/loader",
     "go/packages",
     "go/types/typeutil",
     "imports",
@@ -37,14 +30,14 @@
     "internal/semver",
   ]
   pruneopts = "UT"
-  revision = "a06a922acc1b97001c51689385e2144227c9e820"
+  revision = "bb1329dc71a0cb59ec60f5bce4e5e087516677c0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/fatih/structtag",
-    "github.com/golang/tools/go/loader",
+    "golang.org/x/tools/go/loader",
     "golang.org/x/tools/imports",
   ]
   solver-name = "gps-cdcl"

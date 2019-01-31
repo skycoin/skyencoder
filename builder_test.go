@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang/tools/go/loader"
+	"golang.org/x/tools/go/loader"
 )
 
 type Coins uint64
