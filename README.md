@@ -86,3 +86,32 @@ go run cmd/skyencoder/skyencoder.go -struct SignedBlock -package foo -output-pat
 ```
 
 *Note: do not use `-package` if the generated file is going to be in the same package as the struct*
+
+## Benchmark results
+
+Benchmarks compare the reflect-based `github.com/skycoin/skycoin/src/cipher/encoder` to the generated encoder.
+Benchmarks performed on a Mid-2015 base model 15" Macbook Pro.
+
+```
+» make bench
+go test -benchmem -bench '.*' ./benchmark
+goos: darwin
+goarch: amd64
+pkg: github.com/skycoin/skyencoder/benchmark
+BenchmarkEncodeSize-8                        	300000000	         5.69 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCipherEncodeSize-8                  	 1000000	      1371 ns/op	     120 B/op	      15 allocs/op
+BenchmarkEncode-8                            	10000000	       127 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeSizePlusEncode-8              	10000000	       177 ns/op	     112 B/op	       1 allocs/op
+BenchmarkCipherEncode-8                      	  500000	      3270 ns/op	     384 B/op	      32 allocs/op
+BenchmarkDecode-8                            	 5000000	       364 ns/op	     112 B/op	       9 allocs/op
+BenchmarkCipherDecode-8                      	 1000000	      2202 ns/op	     456 B/op	      27 allocs/op
+BenchmarkEncodeSizeSignedBlock-8             	50000000	        25.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCipherEncodeSizeSignedBlock-8       	  200000	      7617 ns/op	     600 B/op	      75 allocs/op
+BenchmarkEncodeSignedBlock-8                 	 3000000	       423 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeSizePlusEncodeSignedBlock-8   	 2000000	       742 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkCipherEncodeSignedBlock-8           	  100000	     18004 ns/op	    4080 B/op	     185 allocs/op
+BenchmarkDecodeSignedBlock-8                 	 1000000	      1029 ns/op	    1648 B/op	      10 allocs/op
+BenchmarkCipherDecodeSignedBlock-8           	  100000	     12466 ns/op	    5448 B/op	     130 allocs/op
+PASS
+ok  	github.com/skycoin/skyencoder/benchmark	24.378s
+```

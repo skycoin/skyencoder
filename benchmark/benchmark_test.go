@@ -246,12 +246,12 @@ func compareBenchmarkStruct(t *testing.T, a, b BenchmarkStruct) {
 func BenchmarkDecode(b *testing.B) {
 	bs := newBenchmarkStruct()
 	data := encoder.Serialize(bs)
+	var bs1 BenchmarkStruct
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		data2 := data
-		var bs1 BenchmarkStruct
 		DecodeBenchmarkStruct(&encoder.Decoder{
 			Buffer: data2,
 		}, &bs1)
@@ -261,12 +261,12 @@ func BenchmarkDecode(b *testing.B) {
 func BenchmarkCipherDecode(b *testing.B) {
 	bs := newBenchmarkStruct()
 	data := encoder.Serialize(bs)
+	var bs1 BenchmarkStruct
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		data2 := data
-		var bs1 BenchmarkStruct
 		encoder.DeserializeRaw(data2, &bs1)
 	}
 }
@@ -369,12 +369,12 @@ func BenchmarkCipherEncodeSignedBlock(b *testing.B) {
 func BenchmarkDecodeSignedBlock(b *testing.B) {
 	bs := newSignedBlock()
 	data := encoder.Serialize(bs)
+	var bs1 coin.SignedBlock
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		data2 := data
-		var bs1 coin.SignedBlock
 		DecodeSignedBlock(&encoder.Decoder{
 			Buffer: data2,
 		}, &bs1)
@@ -384,12 +384,12 @@ func BenchmarkDecodeSignedBlock(b *testing.B) {
 func BenchmarkCipherDecodeSignedBlock(b *testing.B) {
 	bs := newSignedBlock()
 	data := encoder.Serialize(bs)
+	var bs1 coin.SignedBlock
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		data2 := data
-		var bs1 coin.SignedBlock
 		encoder.DeserializeRaw(data2, &bs1)
 	}
 }
