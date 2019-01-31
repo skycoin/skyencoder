@@ -136,6 +136,8 @@ func main() {
 	}
 	outputFn = filepath.Join(outputPth, outputFn)
 
+	log.Printf("Writing skyencoder for struct %q to file %q", *structName, outputFn)
+
 	if err := ioutil.WriteFile(outputFn, src, 0644); err != nil {
 		log.Fatal("ioutil.WriteFile failed:", err)
 	}
