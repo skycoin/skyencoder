@@ -5,11 +5,13 @@ import (
 	"go/types"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"golang.org/x/tools/go/loader"
 
 	_ "github.com/skycoin/skycoin/src/cipher/encoder" // needed to verify test output
+	_ "github.com/skycoin/skycoin/src/coin"           // needed to verify test output
 )
 
 type Coins uint64
@@ -167,4 +169,40 @@ func TestBuildDemoStruct(t *testing.T) {
 
 func TestBuildOmitEmptyStruct(t *testing.T) {
 	testBuildCode(t, "DemoStructOmitEmpty", "./demo_struct_omit_empty_skyencoder_test.go")
+}
+
+func TestBuildSkycoinSignedBlock(t *testing.T) {
+	importPath := "github.com/skycoin/skycoin/src/coin"
+	structName := "SignedBlock"
+
+	fullPath, err := FindDiskPathOfImport(importPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(fullPath, "signed_block_skyencoder_xxxyyy.go")
+
+	program, err := LoadProgram([]string{importPath}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sInfo, err := FindStructInfoInProgram(program, structName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src, err := BuildStructEncoder(sInfo, "", filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
+	// and clean it up after the test
+	defer removeFile(filename)
+	err = ioutil.WriteFile(filename, src, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyProgramCompiles(t, importPath)
 }
