@@ -13,7 +13,7 @@ Skycoin's [`package encoder`](https://godoc.org/github.com/skycoin/skycoin/src/c
 ## Installation
 
 ```sh
-go install github.com/skycoin/skyencoder
+go get github.com/skycoin/skyencoder/cmd/skyencoder
 ```
 
 This installs `skyencoder` to `$GOPATH/bin`.  Make sure `$GOPATH/bin` is in
