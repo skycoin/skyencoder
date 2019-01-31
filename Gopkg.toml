@@ -26,6 +26,11 @@
 
 
 [[constraint]]
+  # needed to verify test output
+  branch = "develop"
+  name = "github.com/skycoin/skycoin"
+
+[[constraint]]
   name = "github.com/fatih/structtag"
   version = "1.0.0"
 

@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"golang.org/x/tools/go/loader"
+
+	_ "github.com/skycoin/skycoin/src/cipher/encoder" // needed to verify test output
 )
 
 type Coins uint64
