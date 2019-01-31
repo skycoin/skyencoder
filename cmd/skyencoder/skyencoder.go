@@ -15,7 +15,6 @@ import (
 
 /* TODO
 
-- benchmark results against the encoder
 - add go:generate in skycoin
 - add skycoin tests (verify entire db can be loaded)
 
