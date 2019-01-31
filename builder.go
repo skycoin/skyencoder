@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/fatih/structtag"
-	"github.com/x/tools/loader"
+	"golang.org/x/tools/go/loader"
 	"golang.org/x/tools/imports"
 )
 
