@@ -16,17 +16,21 @@ type Options struct {
 
 /* Encode size */
 
-func WrapEncodeSizeFunc(structName, counterName, funcBody string) []byte {
+func WrapEncodeSizeFunc(structName, structPackageName, counterName, funcBody string) []byte {
+	structType := structName
+	if structPackageName != "" {
+		structType = fmt.Sprintf("%s.%s", structPackageName, structName)
+	}
 	return []byte(fmt.Sprintf(`
 // EncodeSize%[1]s computes the size of an encoded object of type %[1]s
-func EncodeSize%[1]s(obj *%[1]s) int {
+func EncodeSize%[1]s(obj *%[4]s) int {
 	%[2]s := 0
 
 	%[3]s
 
 	return %[2]s
 }
-`, structName, counterName, funcBody))
+`, structName, counterName, funcBody, structType))
 }
 
 func BuildEncodeSizeBool(name, counterName string, options *Options) string {
@@ -295,15 +299,19 @@ func BuildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarN
 
 /* Encode */
 
-func WrapEncodeFunc(structName, funcBody string) []byte {
+func WrapEncodeFunc(structName, structPackageName, funcBody string) []byte {
+	structType := structName
+	if structPackageName != "" {
+		structType = fmt.Sprintf("%s.%s", structPackageName, structType)
+	}
 	return []byte(fmt.Sprintf(`
 // Encode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder
-func Encode%[1]s(e *encoder.Encoder, obj *%[1]s) error {
+func Encode%[1]s(e *encoder.Encoder, obj *%[3]s) error {
 	%[2]s
 
 	return nil
 }
-`, structName, funcBody))
+`, structName, funcBody, structType))
 }
 
 func BuildEncodeBool(name string, castType bool, options *Options) string {
@@ -410,7 +418,7 @@ func BuildEncodeString(name string, options *Options) string {
 	%[2]s
 
 	// %[1]s
-	e.Bytes([]byte(%[1]s))
+	e.ByteSlice([]byte(%[1]s))
 	`, name, encodeMaxLengthCheck(name, options))
 
 	if options != nil && options.OmitEmpty {
@@ -428,8 +436,7 @@ func BuildEncodeString(name string, options *Options) string {
 func BuildEncodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
-	copy(e.Buffer[:], %[1]s[:])
-	e.Buffer = e.Buffer[len(%[1]s):]
+	e.CopyBytes(%[1]s[:])
 	`, name)
 }
 
@@ -455,8 +462,7 @@ func BuildEncodeByteSlice(name string, options *Options) string {
 	e.Uint32(uint32(len(%[1]s)))
 
 	// %[1]s copy
-	copy(e.Buffer[:], %[1]s[:])
-	e.Buffer = e.Buffer[len(%[1]s):]
+	e.CopyBytes(%[1]s)
 	`, name, encodeMaxLengthCheck(name, options))
 
 	if options != nil && options.OmitEmpty {
@@ -556,10 +562,14 @@ func encodeMaxLengthCheck(name string, options *Options) string {
 
 /* Decode */
 
-func WrapDecodeFunc(structName, funcBody string) []byte {
+func WrapDecodeFunc(structName, structPackageName, funcBody string) []byte {
+	structType := structName
+	if structPackageName != "" {
+		structType = fmt.Sprintf("%s.%s", structPackageName, structName)
+	}
 	return []byte(fmt.Sprintf(`
 // Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder
-func Decode%[1]s(d *encoder.Decoder, obj *%[1]s) error {
+func Decode%[1]s(d *encoder.Decoder, obj *%[3]s) error {
 	%[2]s
 
 	if len(d.Buffer) != 0 {
@@ -568,7 +578,7 @@ func Decode%[1]s(d *encoder.Decoder, obj *%[1]s) error {
 
 	return nil
 }
-`, structName, funcBody))
+`, structName, funcBody, structType))
 }
 
 func BuildDecodeBool(name string, castType bool, typeName string, options *Options) string {
@@ -758,6 +768,7 @@ func BuildDecodeByteSlice(name string, options *Options) string {
 
 	%[2]s
 
+	%[1]s = make([]byte, length)
 	copy(%[1]s[:], d.Buffer[:length])
 	d.Buffer = d.Buffer[length:]
 	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
