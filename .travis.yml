@@ -6,7 +6,7 @@ go:
   - tip
 
 install:
-  - go get -t github.com/skycoin/skyencoder/...
+  - go get -t github.com/skycoin/skyencoder
   - go install github.com/skycoin/skyencoder/cmd/skyencoder
 
 script:
