@@ -417,6 +417,11 @@ func BuildEncodeString(name string, options *Options) string {
 	body := fmt.Sprintf(`
 	%[2]s
 
+	// %[1]s length check
+	if len(%[1]s) > math.MaxUint32 {
+		return errors.New("%[1]s length exceeds math.MaxUint32")
+	}
+
 	// %[1]s
 	e.ByteSlice([]byte(%[1]s))
 	`, name, encodeMaxLengthCheck(name, options))

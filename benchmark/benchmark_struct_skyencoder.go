@@ -68,6 +68,11 @@ func EncodeBenchmarkStruct(e *encoder.Encoder, obj *BenchmarkStruct) error {
 	// obj.Int64
 	e.Int64(obj.Int64)
 
+	// obj.String length check
+	if len(obj.String) > math.MaxUint32 {
+		return errors.New("obj.String length exceeds math.MaxUint32")
+	}
+
 	// obj.String
 	e.ByteSlice([]byte(obj.String))
 
@@ -81,6 +86,11 @@ func EncodeBenchmarkStruct(e *encoder.Encoder, obj *BenchmarkStruct) error {
 
 	// obj.StringSlice
 	for _, x := range obj.StringSlice {
+
+		// x length check
+		if len(x) > math.MaxUint32 {
+			return errors.New("x length exceeds math.MaxUint32")
+		}
 
 		// x
 		e.ByteSlice([]byte(x))
@@ -108,6 +118,11 @@ func EncodeBenchmarkStruct(e *encoder.Encoder, obj *BenchmarkStruct) error {
 
 	// obj.DynamicStructSlice
 	for _, x := range obj.DynamicStructSlice {
+
+		// x.C length check
+		if len(x.C) > math.MaxUint32 {
+			return errors.New("x.C length exceeds math.MaxUint32")
+		}
 
 		// x.C
 		e.ByteSlice([]byte(x.C))
