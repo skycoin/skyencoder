@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: build test bench format help
+.PHONY: build test bench generate-benchmark-encoder format help
 
 build: ## Build skyencoder binary
 	go build cmd/skyencoder/skyencoder.go
