@@ -293,36 +293,36 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 
 		obj.Block.Body.Transactions = make([]coin.Transaction, length)
 
-		for zz3 := range obj.Block.Body.Transactions {
+		for z3 := range obj.Block.Body.Transactions {
 			{
-				// obj.Block.Body.Transactions[zz3].Length
+				// obj.Block.Body.Transactions[z3].Length
 				i, err := d.Uint32()
 				if err != nil {
 					return err
 				}
-				obj.Block.Body.Transactions[zz3].Length = i
+				obj.Block.Body.Transactions[z3].Length = i
 			}
 
 			{
-				// obj.Block.Body.Transactions[zz3].Type
+				// obj.Block.Body.Transactions[z3].Type
 				i, err := d.Uint8()
 				if err != nil {
 					return err
 				}
-				obj.Block.Body.Transactions[zz3].Type = i
+				obj.Block.Body.Transactions[z3].Type = i
 			}
 
 			{
-				// obj.Block.Body.Transactions[zz3].InnerHash
-				if len(d.Buffer) < len(obj.Block.Body.Transactions[zz3].InnerHash) {
+				// obj.Block.Body.Transactions[z3].InnerHash
+				if len(d.Buffer) < len(obj.Block.Body.Transactions[z3].InnerHash) {
 					return encoder.ErrBufferUnderflow
 				}
-				copy(obj.Block.Body.Transactions[zz3].InnerHash[:], d.Buffer[:len(obj.Block.Body.Transactions[zz3].InnerHash)])
-				d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[zz3].InnerHash):]
+				copy(obj.Block.Body.Transactions[z3].InnerHash[:], d.Buffer[:len(obj.Block.Body.Transactions[z3].InnerHash)])
+				d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[z3].InnerHash):]
 			}
 
 			{
-				// obj.Block.Body.Transactions[zz3].Sigs
+				// obj.Block.Body.Transactions[z3].Sigs
 
 				if len(d.Buffer) < 4 {
 					return encoder.ErrBufferUnderflow
@@ -338,16 +338,16 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 					return encoder.ErrBufferUnderflow
 				}
 
-				obj.Block.Body.Transactions[zz3].Sigs = make([]cipher.Sig, length)
+				obj.Block.Body.Transactions[z3].Sigs = make([]cipher.Sig, length)
 
-				for zz5 := range obj.Block.Body.Transactions[zz3].Sigs {
+				for z5 := range obj.Block.Body.Transactions[z3].Sigs {
 					{
-						// obj.Block.Body.Transactions[zz3].Sigs[zz5]
-						if len(d.Buffer) < len(obj.Block.Body.Transactions[zz3].Sigs[zz5]) {
+						// obj.Block.Body.Transactions[z3].Sigs[z5]
+						if len(d.Buffer) < len(obj.Block.Body.Transactions[z3].Sigs[z5]) {
 							return encoder.ErrBufferUnderflow
 						}
-						copy(obj.Block.Body.Transactions[zz3].Sigs[zz5][:], d.Buffer[:len(obj.Block.Body.Transactions[zz3].Sigs[zz5])])
-						d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[zz3].Sigs[zz5]):]
+						copy(obj.Block.Body.Transactions[z3].Sigs[z5][:], d.Buffer[:len(obj.Block.Body.Transactions[z3].Sigs[z5])])
+						d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[z3].Sigs[z5]):]
 					}
 
 				}
@@ -355,7 +355,7 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 			}
 
 			{
-				// obj.Block.Body.Transactions[zz3].In
+				// obj.Block.Body.Transactions[z3].In
 
 				if len(d.Buffer) < 4 {
 					return encoder.ErrBufferUnderflow
@@ -371,16 +371,16 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 					return encoder.ErrBufferUnderflow
 				}
 
-				obj.Block.Body.Transactions[zz3].In = make([]cipher.SHA256, length)
+				obj.Block.Body.Transactions[z3].In = make([]cipher.SHA256, length)
 
-				for zz5 := range obj.Block.Body.Transactions[zz3].In {
+				for z5 := range obj.Block.Body.Transactions[z3].In {
 					{
-						// obj.Block.Body.Transactions[zz3].In[zz5]
-						if len(d.Buffer) < len(obj.Block.Body.Transactions[zz3].In[zz5]) {
+						// obj.Block.Body.Transactions[z3].In[z5]
+						if len(d.Buffer) < len(obj.Block.Body.Transactions[z3].In[z5]) {
 							return encoder.ErrBufferUnderflow
 						}
-						copy(obj.Block.Body.Transactions[zz3].In[zz5][:], d.Buffer[:len(obj.Block.Body.Transactions[zz3].In[zz5])])
-						d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[zz3].In[zz5]):]
+						copy(obj.Block.Body.Transactions[z3].In[z5][:], d.Buffer[:len(obj.Block.Body.Transactions[z3].In[z5])])
+						d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[z3].In[z5]):]
 					}
 
 				}
@@ -388,7 +388,7 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 			}
 
 			{
-				// obj.Block.Body.Transactions[zz3].Out
+				// obj.Block.Body.Transactions[z3].Out
 
 				if len(d.Buffer) < 4 {
 					return encoder.ErrBufferUnderflow
@@ -404,43 +404,43 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 					return encoder.ErrBufferUnderflow
 				}
 
-				obj.Block.Body.Transactions[zz3].Out = make([]coin.TransactionOutput, length)
+				obj.Block.Body.Transactions[z3].Out = make([]coin.TransactionOutput, length)
 
-				for zz5 := range obj.Block.Body.Transactions[zz3].Out {
+				for z5 := range obj.Block.Body.Transactions[z3].Out {
 					{
-						// obj.Block.Body.Transactions[zz3].Out[zz5].Address.Version
+						// obj.Block.Body.Transactions[z3].Out[z5].Address.Version
 						i, err := d.Uint8()
 						if err != nil {
 							return err
 						}
-						obj.Block.Body.Transactions[zz3].Out[zz5].Address.Version = i
+						obj.Block.Body.Transactions[z3].Out[z5].Address.Version = i
 					}
 
 					{
-						// obj.Block.Body.Transactions[zz3].Out[zz5].Address.Key
-						if len(d.Buffer) < len(obj.Block.Body.Transactions[zz3].Out[zz5].Address.Key) {
+						// obj.Block.Body.Transactions[z3].Out[z5].Address.Key
+						if len(d.Buffer) < len(obj.Block.Body.Transactions[z3].Out[z5].Address.Key) {
 							return encoder.ErrBufferUnderflow
 						}
-						copy(obj.Block.Body.Transactions[zz3].Out[zz5].Address.Key[:], d.Buffer[:len(obj.Block.Body.Transactions[zz3].Out[zz5].Address.Key)])
-						d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[zz3].Out[zz5].Address.Key):]
+						copy(obj.Block.Body.Transactions[z3].Out[z5].Address.Key[:], d.Buffer[:len(obj.Block.Body.Transactions[z3].Out[z5].Address.Key)])
+						d.Buffer = d.Buffer[len(obj.Block.Body.Transactions[z3].Out[z5].Address.Key):]
 					}
 
 					{
-						// obj.Block.Body.Transactions[zz3].Out[zz5].Coins
+						// obj.Block.Body.Transactions[z3].Out[z5].Coins
 						i, err := d.Uint64()
 						if err != nil {
 							return err
 						}
-						obj.Block.Body.Transactions[zz3].Out[zz5].Coins = i
+						obj.Block.Body.Transactions[z3].Out[z5].Coins = i
 					}
 
 					{
-						// obj.Block.Body.Transactions[zz3].Out[zz5].Hours
+						// obj.Block.Body.Transactions[z3].Out[z5].Hours
 						i, err := d.Uint64()
 						if err != nil {
 							return err
 						}
-						obj.Block.Body.Transactions[zz3].Out[zz5].Hours = i
+						obj.Block.Body.Transactions[z3].Out[z5].Hours = i
 					}
 
 				}

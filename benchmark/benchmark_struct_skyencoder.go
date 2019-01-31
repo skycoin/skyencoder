@@ -197,9 +197,9 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 
 		obj.StringSlice = make([]string, length)
 
-		for zz1 := range obj.StringSlice {
+		for z1 := range obj.StringSlice {
 			{
-				// obj.StringSlice[zz1]
+				// obj.StringSlice[z1]
 
 				if len(d.Buffer) < 4 {
 					return encoder.ErrBufferUnderflow
@@ -215,7 +215,7 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 					return encoder.ErrBufferUnderflow
 				}
 
-				obj.StringSlice[zz1] = string(d.Buffer[:length])
+				obj.StringSlice[z1] = string(d.Buffer[:length])
 				d.Buffer = d.Buffer[length:]
 			}
 		}
@@ -224,23 +224,23 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 
 	{
 		// obj.StaticStructArray
-		for zz1 := range obj.StaticStructArray {
+		for z1 := range obj.StaticStructArray {
 			{
-				// obj.StaticStructArray[zz1].A
+				// obj.StaticStructArray[z1].A
 				i, err := d.Uint8()
 				if err != nil {
 					return err
 				}
-				obj.StaticStructArray[zz1].A = i
+				obj.StaticStructArray[z1].A = i
 			}
 
 			{
-				// obj.StaticStructArray[zz1].B
+				// obj.StaticStructArray[z1].B
 				i, err := d.Uint64()
 				if err != nil {
 					return err
 				}
-				obj.StaticStructArray[zz1].B = i
+				obj.StaticStructArray[z1].B = i
 			}
 
 		}
@@ -265,9 +265,9 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 
 		obj.DynamicStructSlice = make([]DynamicStruct, length)
 
-		for zz1 := range obj.DynamicStructSlice {
+		for z1 := range obj.DynamicStructSlice {
 			{
-				// obj.DynamicStructSlice[zz1].C
+				// obj.DynamicStructSlice[z1].C
 
 				if len(d.Buffer) < 4 {
 					return encoder.ErrBufferUnderflow
@@ -283,7 +283,7 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 					return encoder.ErrBufferUnderflow
 				}
 
-				obj.DynamicStructSlice[zz1].C = string(d.Buffer[:length])
+				obj.DynamicStructSlice[z1].C = string(d.Buffer[:length])
 				d.Buffer = d.Buffer[length:]
 			}
 		}

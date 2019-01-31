@@ -61,7 +61,7 @@ func LoadProgram(args, buildTags []string) (*loader.Program, error) {
 	buildContext.BuildTags = append(buildContext.BuildTags, buildTags...)
 
 	// Load the package with the least restrictive parsing and type checking,
-	// so that a package that doesn't compile can still have a struct declaration extracted
+	// so that a package that doesn't compile can still have a type declaration extracted
 	cfg := loader.Config{
 		Build:      &buildContext,
 		ParserMode: 0,
@@ -94,25 +94,25 @@ func LoadProgram(args, buildTags []string) (*loader.Program, error) {
 	return program, nil
 }
 
-// StructInfo has metadata for a struct type loaded from source
-type StructInfo struct {
+// TypeInfo has metadata for a type loaded from source
+type TypeInfo struct {
 	Name    string
-	Struct  *types.Struct
+	Type    types.Type
 	Package *types.Package
 }
 
-// FindStructInfoInProgram finds a matching struct by name from a `*loader.Program`.
-func FindStructInfoInProgram(p *loader.Program, name string) (*StructInfo, error) {
+// FindTypeInfoInProgram finds a matching type by name from a `*loader.Program`.
+func FindTypeInfoInProgram(p *loader.Program, name string) (*TypeInfo, error) {
 	// For programs loaded by file, the package will be in p.Created. Look here first
 	for _, pk := range p.Created {
-		s, err := findStructTypeInPackage(pk, name)
+		s, err := findTypeInPackage(pk, name)
 		if err != nil {
 			return nil, err
 		}
 		if s != nil {
-			return &StructInfo{
+			return &TypeInfo{
 				Name:    name,
-				Struct:  s,
+				Type:    s,
 				Package: pk.Pkg,
 			}, nil
 		}
@@ -120,14 +120,14 @@ func FindStructInfoInProgram(p *loader.Program, name string) (*StructInfo, error
 
 	// For programs loaded by import path, the package will be in imported
 	for _, pk := range p.Imported {
-		s, err := findStructTypeInPackage(pk, name)
+		s, err := findTypeInPackage(pk, name)
 		if err != nil {
 			return nil, err
 		}
 		if s != nil {
-			return &StructInfo{
+			return &TypeInfo{
 				Name:    name,
-				Struct:  s,
+				Type:    s,
 				Package: pk.Pkg,
 			}, nil
 		}
@@ -136,7 +136,7 @@ func FindStructInfoInProgram(p *loader.Program, name string) (*StructInfo, error
 	return nil, nil
 }
 
-func findStructTypeInPackage(p *loader.PackageInfo, name string) (*types.Struct, error) {
+func findTypeInPackage(p *loader.PackageInfo, name string) (types.Type, error) {
 loop:
 	for _, v := range p.Defs {
 		if v == nil {
@@ -150,27 +150,21 @@ loop:
 			if obj.Name() != name {
 				continue loop
 			}
-			st := x.Underlying()
-			switch y := st.(type) {
-			case *types.Struct:
-				return y, nil
-			default:
-				return nil, fmt.Errorf("Found type with name %s but underlying type is %T, not struct", name, y)
-			}
+			return x.Underlying(), nil
 		}
 	}
 
 	return nil, nil
 }
 
-// BuildStructEncoder builds formatted source code for encoding/decoding a struct.
-// If `destPackage` is empty, assumes the generated code will be in the same package as the struct.
-// Otherwise, the generated code will have this package in the package name declaration, and reference the struct as an external type.
+// BuildTypeEncoder builds formatted source code for encoding/decoding a type.
+// If `destPackage` is empty, assumes the generated code will be in the same package as the type.
+// Otherwise, the generated code will have this package in the package name declaration, and reference the type as an external type.
 // `fmtFilename` is a somewhat arbitrary reference filename; when formatting the code with imports, the generated code is treated as
 // being from this filename for the purpose of resolving the necessary import paths.
-// If not using `destPackage`, `fmtFilename` should be an arbitrary filename in the same path as the file which contains the struct.
+// If not using `destPackage`, `fmtFilename` should be an arbitrary filename in the same path as the file which contains the type.
 // If using `destPackage`, `fmtFilename` should be an arbitrary filename in the path where the file is to be saved.
-func BuildStructEncoder(s *StructInfo, destPackage, fmtFilename string) ([]byte, error) {
+func BuildTypeEncoder(s *TypeInfo, destPackage, fmtFilename string) ([]byte, error) {
 	debugPrintln("Package path:", s.Package.Path())
 	encodeSizeSrc, err := buildEncodeSize(s, destPackage != "")
 	if err != nil {
@@ -182,7 +176,7 @@ func BuildStructEncoder(s *StructInfo, destPackage, fmtFilename string) ([]byte,
 		return nil, fmt.Errorf("buildEncode failed: %v", err)
 	}
 
-	// Use the struct's package for localizing type names to the package where application,
+	// Use the type's package for localizing type names to the package,
 	// unless destPackage is specified, then treat all type names as non-local
 	internalPackage := s.Package
 	if destPackage != "" {
@@ -219,8 +213,8 @@ func BuildStructEncoder(s *StructInfo, destPackage, fmtFilename string) ([]byte,
 	return fmtSrc, nil
 }
 
-func buildEncodeSize(s *StructInfo, externalPackage bool) ([]byte, error) {
-	section, _, err := buildCodeSectionEncodeSize(s.Struct, "obj", "i", 0, nil)
+func buildEncodeSize(s *TypeInfo, externalPackage bool) ([]byte, error) {
+	section, _, err := buildCodeSectionEncodeSize(s.Type, "obj", "i", 0, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -233,8 +227,8 @@ func buildEncodeSize(s *StructInfo, externalPackage bool) ([]byte, error) {
 	return WrapEncodeSizeFunc(s.Name, pkgName, "i0", section), nil
 }
 
-func buildEncode(s *StructInfo, externalPackage bool) ([]byte, error) {
-	section, err := buildCodeSectionEncode(s.Struct, "obj", false, nil)
+func buildEncode(s *TypeInfo, externalPackage bool) ([]byte, error) {
+	section, err := buildCodeSectionEncode(s.Type, "obj", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -247,8 +241,8 @@ func buildEncode(s *StructInfo, externalPackage bool) ([]byte, error) {
 	return WrapEncodeFunc(s.Name, pkgName, section), nil
 }
 
-func buildDecode(s *StructInfo, p *types.Package, externalPackage bool) ([]byte, error) {
-	section, err := buildCodeSectionDecode(s.Struct, p, "obj", false, "", 0, nil)
+func buildDecode(s *TypeInfo, p *types.Package, externalPackage bool) ([]byte, error) {
+	section, err := buildCodeSectionDecode(s.Type, p, "obj", false, "", 0, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -577,7 +571,7 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 			return BuildDecodeByteArray(varName, options), nil
 		}
 
-		elemCounterName := fmt.Sprintf("zz%d", depth)
+		elemCounterName := fmt.Sprintf("z%d", depth)
 		elemVarName := fmt.Sprintf("%s[%s]", varName, elemCounterName)
 		elemSection, err := buildCodeSectionDecode(elem, p, elemVarName, false, "", depth+1, nil)
 		if err != nil {
@@ -593,7 +587,7 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 			return BuildDecodeByteSlice(varName, options), nil
 		}
 
-		elemCounterName := fmt.Sprintf("zz%d", depth)
+		elemCounterName := fmt.Sprintf("z%d", depth)
 		elemVarName := fmt.Sprintf("%s[%s]", varName, elemCounterName)
 		elemSection, err := buildCodeSectionDecode(elem, p, elemVarName, false, "", depth+1, nil)
 		if err != nil {

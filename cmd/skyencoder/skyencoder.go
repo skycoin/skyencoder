@@ -15,6 +15,8 @@ import (
 
 /* TODO
 
+IN SKYCOIN:
+
 - add go:generate in skycoin
 - add skycoin tests (verify entire db can be loaded)
 
@@ -40,17 +42,18 @@ func debugPrintf(msg string, args ...interface{}) {
 }
 
 var (
-	structName     = flag.String("struct", "", "struct name, must be set")
-	outputFilename = flag.String("output-file", "", "output file name; default <struct_name>_skyencoder.go")
+	typeName       = flag.String("type", "", "type name, must be set")
+	outputFilename = flag.String("output-file", "", "output file name; default <type_name>_skyencoder.go")
 	outputPath     = flag.String("output-path", "", "output path; defaults to the package's path, or the file's containing folder")
 	buildTags      = flag.String("tags", "", "comma-separated list of build tags to apply")
-	destPackage    = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
+	destPackage    = flag.String("package", "", "package name for the output; if not provided, defaults to the type's package")
+	silent         = flag.Bool("silent", false, "disable all non-error log output")
 )
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage of skyencoder:\n")
-	fmt.Fprintf(os.Stderr, "\tskyencoder [flags] -struct T [go import path e.g. github.com/skycoin/skycoin/src/coin]\n")
-	fmt.Fprintf(os.Stderr, "\tskyencoder [flags] -struct T files... # Must be a single package\n")
+	fmt.Fprintf(os.Stderr, "\tskyencoder [flags] -type T [go import path e.g. github.com/skycoin/skycoin/src/coin]\n")
+	fmt.Fprintf(os.Stderr, "\tskyencoder [flags] -type T files... # Must be a single package\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
@@ -62,7 +65,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	if *structName == "" {
+	if *typeName == "" {
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -86,12 +89,12 @@ func main() {
 
 	debugPrintln("args:", args)
 
-	sInfo, err := skyencoder.FindStructInfoInProgram(program, *structName)
+	sInfo, err := skyencoder.FindTypeInfoInProgram(program, *typeName)
 	if err != nil {
-		log.Fatalf("Program did not contain valid struct for name %s: %v", *structName, err)
+		log.Fatalf("Program did not contain valid type for name %s: %v", *typeName, err)
 	}
 	if sInfo == nil {
-		log.Fatal("Program does not contain type:", *structName)
+		log.Fatal("Program does not contain type:", *typeName)
 	}
 
 	// Determine if the arg is a directory or multiple files
@@ -116,9 +119,9 @@ func main() {
 		fmtFilename = filepath.Join(args[0], "foo123123123123999.go")
 	}
 
-	src, err := skyencoder.BuildStructEncoder(sInfo, *destPackage, fmtFilename)
+	src, err := skyencoder.BuildTypeEncoder(sInfo, *destPackage, fmtFilename)
 	if err != nil {
-		log.Fatal("skyencoder.BuildStructEncoder failed:", err)
+		log.Fatal("skyencoder.BuildTypeEncoder failed:", err)
 	}
 
 	debugPrintln(string(src))
@@ -127,7 +130,7 @@ func main() {
 	if outputFn == "" {
 		// If the input is a filename, put next to the file
 		// If the input is a package, put in the package
-		outputFn = fmt.Sprintf("%s_skyencoder.go", toSnakeCase(*structName))
+		outputFn = fmt.Sprintf("%s_skyencoder.go", toSnakeCase(*typeName))
 	}
 
 	outputPth := *outputPath
@@ -136,7 +139,9 @@ func main() {
 	}
 	outputFn = filepath.Join(outputPth, outputFn)
 
-	log.Printf("Writing skyencoder for struct %q to file %q", *structName, outputFn)
+	if !*silent {
+		log.Printf("Writing skyencoder for type %q to file %q", *typeName, outputFn)
+	}
 
 	if err := ioutil.WriteFile(outputFn, src, 0644); err != nil {
 		log.Fatal("ioutil.WriteFile failed:", err)

@@ -13,8 +13,8 @@ bench: ## Run benchmarks
 	go test -benchmem -bench '.*' ./benchmark
 
 generate-benchmark-encoder: ## Generate the encoders for the benchmarks
-	go run cmd/skyencoder/skyencoder.go -struct BenchmarkStruct github.com/skycoin/skyencoder/benchmark
-	go run cmd/skyencoder/skyencoder.go -struct SignedBlock -package benchmark -output-path ./benchmark github.com/skycoin/skycoin/src/coin
+	go run cmd/skyencoder/skyencoder.go -type BenchmarkStruct github.com/skycoin/skyencoder/benchmark
+	go run cmd/skyencoder/skyencoder.go -type SignedBlock -package benchmark -output-path ./benchmark github.com/skycoin/skycoin/src/coin
 
 check-generate-benchmark-encoder-unchanged: ## Check that make generate-benchmark-encoder did not change the code
 	@if [ "$(shell git diff ./benchmark/benchmark_struct_skyencoder.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmark-encoder' ; exit 2 ; fi
