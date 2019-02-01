@@ -102,6 +102,20 @@ func buildEncodeSizeInt64(name, counterName string, options *Options) string {
 	`, name, counterName)
 }
 
+func buildEncodeSizeFloat32(name, counterName string, options *Options) string {
+	return fmt.Sprintf(`
+		// %[1]s
+		%[2]s += 4
+	`, name, counterName)
+}
+
+func buildEncodeSizeFloat64(name, counterName string, options *Options) string {
+	return fmt.Sprintf(`
+		// %[1]s
+		%[2]s += 8
+	`, name, counterName)
+}
+
 func buildEncodeSizeString(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
@@ -422,6 +436,28 @@ func buildEncodeInt64(name string, castType bool, options *Options) string {
 	return fmt.Sprintf(`
 	// %[1]s
 	e.Int64(%[2]s)
+	`, name, castName)
+}
+
+func buildEncodeFloat32(name string, castType bool, options *Options) string {
+	castName := name
+	if castType {
+		castName = cast("float32", name)
+	}
+	return fmt.Sprintf(`
+	// %[1]s
+	e.Uint32(math.Float32bits(%[2]s))
+	`, name, castName)
+}
+
+func buildEncodeFloat64(name string, castType bool, options *Options) string {
+	castName := name
+	if castType {
+		castName = cast("float64", name)
+	}
+	return fmt.Sprintf(`
+	// %[1]s
+	e.Uint64(math.Float64bits(%[2]s))
 	`, name, castName)
 }
 
@@ -747,6 +783,61 @@ func buildDecodeInt64(name string, castType bool, typeName string, options *Opti
 	`, name, assign)
 }
 
+func buildDecodeFloat32(name string, castType bool, typeName string, options *Options) string {
+	assign := "i"
+	if castType {
+		assign = cast(typeName, assign)
+	}
+	return fmt.Sprintf(`{
+	// %[1]s
+	i, err := d.Uint32()
+	if err != nil {
+		return err
+	}
+	%[1]s = math.Float32frombits(%[2]s)
+	}
+	`, name, assign)
+}
+
+func buildDecodeFloat64(name string, castType bool, typeName string, options *Options) string {
+	assign := "i"
+	if castType {
+		assign = cast(typeName, assign)
+	}
+	return fmt.Sprintf(`{
+	// %[1]s
+	i, err := d.Uint64()
+	if err != nil {
+		return err
+	}
+	%[1]s = math.Float64frombits(%[2]s)
+	}
+	`, name, assign)
+}
+
+func buildDecodeString(name string, options *Options) string {
+	return fmt.Sprintf(`{
+	// %[1]s
+
+	%[3]s
+
+	ul, err := d.Uint32()
+	if err != nil {
+		return err
+	}
+
+	length := int(ul)
+	if length < 0 || length > len(d.Buffer) {
+		return encoder.ErrBufferUnderflow
+	}
+
+	%[2]s
+
+	%[1]s = string(d.Buffer[:length])
+	d.Buffer = d.Buffer[length:]
+	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
+}
+
 func buildDecodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
@@ -775,10 +866,6 @@ func buildDecodeByteSlice(name string, options *Options) string {
 
 	%[3]s
 
-	if len(d.Buffer) < 4 {
-		return encoder.ErrBufferUnderflow
-	}
-
 	ul, err := d.Uint32()
 	if err != nil {
 		return err
@@ -806,10 +893,6 @@ func buildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName 
 
 	%[7]s
 
-	if len(d.Buffer) < 4 {
-		return encoder.ErrBufferUnderflow
-	}
-
 	ul, err := d.Uint32()
 	if err != nil {
 		return err
@@ -832,42 +915,11 @@ func buildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName 
 	}`, name, elemCounterName, elemVarName, elemSection, typeName, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
 }
 
-func buildDecodeString(name string, options *Options) string {
-	return fmt.Sprintf(`{
-	// %[1]s
-
-	%[3]s
-
-	if len(d.Buffer) < 4 {
-		return encoder.ErrBufferUnderflow
-	}
-
-	ul, err := d.Uint32()
-	if err != nil {
-		return err
-	}
-
-	length := int(ul)
-	if length < 0 || length > len(d.Buffer) {
-		return encoder.ErrBufferUnderflow
-	}
-
-	%[2]s
-
-	%[1]s = string(d.Buffer[:length])
-	d.Buffer = d.Buffer[length:]
-	}`, name, decodeMaxLengthCheck(options), decodeOmitEmptyCheck(options))
-}
-
 func buildDecodeMap(name, keyVarName, elemVarName, keySection, elemSection, typeName string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 
 	%[8]s
-
-	if len(d.Buffer) < 4 {
-		return encoder.ErrBufferUnderflow
-	}
 
 	ul, err := d.Uint32()
 	if err != nil {
@@ -949,7 +1001,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-func newEmpty%[1]sForEncodeTest() *%[2]s {
+func newEmpty%[1]sForEncodeTest() %[3]s%[2]s {
 	var obj %[2]s
 	return %[4]sobj
 }
@@ -1090,6 +1142,62 @@ func TestSkyencoder%[1]s(t *testing.T) {
 			testSkyencoder%[1]s(t, tc.obj)
 		})
 	}
+}
+
+func decode%[1]sExpectError(t *testing.T, buf []byte, expectedErr error) {
+	var obj %[2]s
+	err := Decode%[1]s(&encoder.Decoder{
+		Buffer: buf,
+	}, &obj)
+
+	if err == nil {
+		// TODO -- how about omitempty?
+		t.Fatal("Decode%[1]s: expected error, got nil")
+	}
+
+	if err != expectedErr {
+		t.Fatalf("Decode%[1]s: expected encoder.ErrBufferUnderflow, got %%v", err)
+	}
+}
+
+func testSkyencoder%[1]sDecodeErrors(t *testing.T, obj %[3]s%[2]s) {
+	n := EncodeSize%[1]s(obj)
+	buf := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: buf[:],
+	}
+
+	err := Encode%[1]s(e, obj)
+	if err != nil {
+		t.Fatalf("Encode%[1]s failed: %%v", err)
+	}
+
+	t.Run("buffer underflow nil", func(t *testing.T) {
+		decode%[1]sExpectError(t, nil, encoder.ErrBufferUnderflow)
+	})
+
+	for i := 0; i < n; i++ {
+
+		t.Run(fmt.Sprintf("buffer underflow %%d", i), func(t *testing.T) {
+			decode%[1]sExpectError(t, buf[:i], encoder.ErrBufferUnderflow)
+		})
+	}
+
+	// Buffer too long (TODO: How about omitempty?)
+	buf = append(buf, 0)
+	t.Run("remaining bytes", func(t *testing.T) {
+		decode%[1]sExpectError(t, buf[:], encoder.ErrRemainingBytes)
+	})
+}
+
+func TestSkyencoder%[1]sDecodeErrors(t *testing.T) {
+	rand := mathrand.New(mathrand.NewSource(time.Now().Unix()))
+
+	emptyObj := newEmpty%[1]sForEncodeTest()
+	fullObj := newRandom%[1]sForEncodeTest(t, rand)
+
+	testSkyencoder%[1]sDecodeErrors(t, emptyObj)
+	testSkyencoder%[1]sDecodeErrors(t, fullObj)
 }
 
 `, typeName, fullTypeName, pointerArg, addressOp, packageName)

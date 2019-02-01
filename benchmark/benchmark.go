@@ -17,4 +17,5 @@ type BenchmarkStruct struct {
 	DynamicStructSlice []DynamicStruct
 	ByteArray          [3]uint8
 	ByteSlice          []uint8
+	StringMaxLen       string `enc:",maxlen=4"`
 }

@@ -326,6 +326,10 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 			return buildEncodeUint32(varName, castType, options), nil
 		case types.Uint64:
 			return buildEncodeUint64(varName, castType, options), nil
+		case types.Float32:
+			return buildEncodeFloat32(varName, castType, options), nil
+		case types.Float64:
+			return buildEncodeFloat64(varName, castType, options), nil
 		case types.String:
 			return buildEncodeString(varName, options), nil
 		default:
@@ -414,6 +418,7 @@ func buildCodeSectionEncode(t types.Type, varName string, castType bool, options
 	}
 }
 
+// buildCodeSectionEncodeSize returns the code section and whether or not the section has dynamic sizing (requiring a runtime len() check)
 func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, depth int, options *Options) (string, bool, error) {
 	debugPrintf("buildCodeSectionEncodeSize type=%T varName=%s baseCounterName=%s depth=%d options=%+v\n", t, varName, baseCounterName, depth, options)
 
@@ -449,6 +454,10 @@ func buildCodeSectionEncodeSize(t types.Type, varName, baseCounterName string, d
 			return buildEncodeSizeUint32(varName, counterName, options), false, nil
 		case types.Uint64:
 			return buildEncodeSizeUint64(varName, counterName, options), false, nil
+		case types.Float32:
+			return buildEncodeSizeFloat32(varName, counterName, options), false, nil
+		case types.Float64:
+			return buildEncodeSizeFloat64(varName, counterName, options), false, nil
 		case types.String:
 			return buildEncodeSizeString(varName, counterName, options), true, nil
 		default:
@@ -593,6 +602,10 @@ func buildCodeSectionDecode(t types.Type, p *types.Package, varName string, cast
 			return buildDecodeUint32(varName, castType, typeName, options), nil
 		case types.Uint64:
 			return buildDecodeUint64(varName, castType, typeName, options), nil
+		case types.Float32:
+			return buildDecodeFloat32(varName, castType, typeName, options), nil
+		case types.Float64:
+			return buildDecodeFloat64(varName, castType, typeName, options), nil
 		case types.String:
 			return buildDecodeString(varName, options), nil
 		default:

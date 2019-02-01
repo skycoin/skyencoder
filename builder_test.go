@@ -39,6 +39,8 @@ type DemoStruct struct {
 	Int16                  int16
 	Int32                  int32
 	Int64                  int64
+	Float32                float32
+	Float64                float64
 	Byte                   byte
 	String                 string
 	DynamicStruct          DynamicStruct

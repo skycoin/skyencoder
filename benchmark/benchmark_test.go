@@ -37,8 +37,9 @@ func newBenchmarkStruct() *BenchmarkStruct {
 				C: "foobarbaz",
 			},
 		},
-		ByteArray: [3]uint8{1, 2, 3},
-		ByteSlice: []uint8{1, 2, 3},
+		ByteArray:    [3]uint8{1, 2, 3},
+		ByteSlice:    []uint8{1, 2, 3},
+		StringMaxLen: "baz",
 	}
 }
 

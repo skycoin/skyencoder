@@ -277,10 +277,6 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 	{
 		// obj.Block.Body.Transactions
 
-		if len(d.Buffer) < 4 {
-			return encoder.ErrBufferUnderflow
-		}
-
 		ul, err := d.Uint32()
 		if err != nil {
 			return err
@@ -325,10 +321,6 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 				{
 					// obj.Block.Body.Transactions[z3].Sigs
 
-					if len(d.Buffer) < 4 {
-						return encoder.ErrBufferUnderflow
-					}
-
 					ul, err := d.Uint32()
 					if err != nil {
 						return err
@@ -359,10 +351,6 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 				{
 					// obj.Block.Body.Transactions[z3].In
 
-					if len(d.Buffer) < 4 {
-						return encoder.ErrBufferUnderflow
-					}
-
 					ul, err := d.Uint32()
 					if err != nil {
 						return err
@@ -392,10 +380,6 @@ func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
 
 				{
 					// obj.Block.Body.Transactions[z3].Out
-
-					if len(d.Buffer) < 4 {
-						return encoder.ErrBufferUnderflow
-					}
 
 					ul, err := d.Uint32()
 					if err != nil {
