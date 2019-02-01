@@ -195,31 +195,32 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 			return encoder.ErrBufferUnderflow
 		}
 
-		obj.StringSlice = make([]string, length)
+		if length != 0 {
+			obj.StringSlice = make([]string, length)
 
-		for z1 := range obj.StringSlice {
-			{
-				// obj.StringSlice[z1]
+			for z1 := range obj.StringSlice {
+				{
+					// obj.StringSlice[z1]
 
-				if len(d.Buffer) < 4 {
-					return encoder.ErrBufferUnderflow
+					if len(d.Buffer) < 4 {
+						return encoder.ErrBufferUnderflow
+					}
+
+					ul, err := d.Uint32()
+					if err != nil {
+						return err
+					}
+
+					length := int(ul)
+					if length < 0 || length > len(d.Buffer) {
+						return encoder.ErrBufferUnderflow
+					}
+
+					obj.StringSlice[z1] = string(d.Buffer[:length])
+					d.Buffer = d.Buffer[length:]
 				}
-
-				ul, err := d.Uint32()
-				if err != nil {
-					return err
-				}
-
-				length := int(ul)
-				if length < 0 || length > len(d.Buffer) {
-					return encoder.ErrBufferUnderflow
-				}
-
-				obj.StringSlice[z1] = string(d.Buffer[:length])
-				d.Buffer = d.Buffer[length:]
 			}
 		}
-
 	}
 
 	{
@@ -263,31 +264,32 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 			return encoder.ErrBufferUnderflow
 		}
 
-		obj.DynamicStructSlice = make([]DynamicStruct, length)
+		if length != 0 {
+			obj.DynamicStructSlice = make([]DynamicStruct, length)
 
-		for z1 := range obj.DynamicStructSlice {
-			{
-				// obj.DynamicStructSlice[z1].C
+			for z1 := range obj.DynamicStructSlice {
+				{
+					// obj.DynamicStructSlice[z1].C
 
-				if len(d.Buffer) < 4 {
-					return encoder.ErrBufferUnderflow
+					if len(d.Buffer) < 4 {
+						return encoder.ErrBufferUnderflow
+					}
+
+					ul, err := d.Uint32()
+					if err != nil {
+						return err
+					}
+
+					length := int(ul)
+					if length < 0 || length > len(d.Buffer) {
+						return encoder.ErrBufferUnderflow
+					}
+
+					obj.DynamicStructSlice[z1].C = string(d.Buffer[:length])
+					d.Buffer = d.Buffer[length:]
 				}
-
-				ul, err := d.Uint32()
-				if err != nil {
-					return err
-				}
-
-				length := int(ul)
-				if length < 0 || length > len(d.Buffer) {
-					return encoder.ErrBufferUnderflow
-				}
-
-				obj.DynamicStructSlice[z1].C = string(d.Buffer[:length])
-				d.Buffer = d.Buffer[length:]
 			}
 		}
-
 	}
 
 	{
@@ -316,9 +318,12 @@ func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
 			return encoder.ErrBufferUnderflow
 		}
 
-		obj.ByteSlice = make([]byte, length)
-		copy(obj.ByteSlice[:], d.Buffer[:length])
-		d.Buffer = d.Buffer[length:]
+		if length != 0 {
+			obj.ByteSlice = make([]byte, length)
+
+			copy(obj.ByteSlice[:], d.Buffer[:length])
+			d.Buffer = d.Buffer[length:]
+		}
 	}
 
 	if len(d.Buffer) != 0 {

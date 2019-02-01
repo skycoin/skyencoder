@@ -15,15 +15,24 @@ import (
 
 /* TODO
 
+- float32/float64 support
+
+- generate test files that compare against the encoder for an encoded struct
+	- how can we automate the creation of data though?
+		- could have complicated way, where we build a data generator
+			- write random bytes, except for length prefixes, which must be valid
+	- can generate with an empty object, and let the user fill in the details?
+		- regeneration would overwrite the filled in object
+
 IN SKYCOIN:
 
-- add go:generate in skycoin
 - add skycoin tests (verify entire db can be loaded)
 
 TO DOCUMENT:
 
 - (wiki) document encoding format
 - (wiki) document usage in golang (maxlen, omitempty, "-", ignores unexported fields)
+- decoding specifics (empty map/slice are always left nil)
 
 */
 
@@ -48,6 +57,7 @@ var (
 	buildTags      = flag.String("tags", "", "comma-separated list of build tags to apply")
 	destPackage    = flag.String("package", "", "package name for the output; if not provided, defaults to the type's package")
 	silent         = flag.Bool("silent", false, "disable all non-error log output")
+	noTest         = flag.Bool("no-test", false, "disable generating the _test.go file (test files require github.com/google/go-cmp/cmp)")
 )
 
 func usage() {
@@ -89,11 +99,11 @@ func main() {
 
 	debugPrintln("args:", args)
 
-	sInfo, err := skyencoder.FindTypeInfoInProgram(program, *typeName)
+	typeInfo, err := skyencoder.FindTypeInfoInProgram(program, *typeName)
 	if err != nil {
 		log.Fatalf("Program did not contain valid type for name %s: %v", *typeName, err)
 	}
-	if sInfo == nil {
+	if typeInfo == nil {
 		log.Fatal("Program does not contain type:", *typeName)
 	}
 
@@ -109,19 +119,27 @@ func main() {
 			log.Fatal(err)
 		}
 		// argument is a import path e.g. "github.com/skycoin/skycoin/src/coin"
-		destPath, err = skyencoder.FindDiskPathOfImport(sInfo.Package.Path())
+		destPath, err = skyencoder.FindDiskPathOfImport(typeInfo.Package.Path())
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmtFilename = filepath.Join(sInfo.Package.Path(), "foo123123123123999.go")
+		fmtFilename = filepath.Join(typeInfo.Package.Path(), "foo123123123123999.go")
 	} else if stat.IsDir() {
 		destPath = args[0]
 		fmtFilename = filepath.Join(args[0], "foo123123123123999.go")
 	}
 
-	src, err := skyencoder.BuildTypeEncoder(sInfo, *destPackage, fmtFilename)
+	src, err := skyencoder.BuildTypeEncoder(typeInfo, *destPackage, fmtFilename)
 	if err != nil {
 		log.Fatal("skyencoder.BuildTypeEncoder failed:", err)
+	}
+
+	var testSrc []byte
+	if !*noTest {
+		testSrc, err = skyencoder.BuildTypeEncoderTest(typeInfo, *destPackage, fmtFilename)
+		if err != nil {
+			log.Fatal("skyencoder.BuildTypeEncoderTest failed:", err)
+		}
 	}
 
 	debugPrintln(string(src))
@@ -145,6 +163,20 @@ func main() {
 
 	if err := ioutil.WriteFile(outputFn, src, 0644); err != nil {
 		log.Fatal("ioutil.WriteFile failed:", err)
+	}
+
+	if !*noTest {
+		outputExt := filepath.Ext(outputFn)
+		base := outputFn[:len(outputFn)-len(outputExt)]
+		testOutputFn := fmt.Sprintf("%s_test%s", base, outputExt)
+
+		if !*silent {
+			log.Printf("Writing skyencoder tests for type %q to file %q", *typeName, testOutputFn)
+		}
+
+		if err := ioutil.WriteFile(testOutputFn, testSrc, 0644); err != nil {
+			log.Fatal("ioutil.WriteFile failed:", err)
+		}
 	}
 }
 
