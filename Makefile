@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: build test bench generate-tests check-generate-tests
-.PHONY: generate-benchmark-encoder check-generate-benchmark-encoder-unchanged
+.PHONY: build test bench generate-tests check-generate-tests-unchanged
+.PHONY: generate-benchmarks check-generate-benchmarks-unchanged
 .PHONY: format help
 
 build: ## Build skyencoder binary
@@ -9,74 +9,78 @@ build: ## Build skyencoder binary
 test: ## Run tests
 	go test ./...
 
-check: generate-tests check-generate-tests-unchanged test generate-benchmark-encoder check-generate-benchmark-encoder-unchanged ## Run tests and check code generation
+check: generate check-generate-unchanged test ## Run tests and check code generation
 
 bench: ## Run benchmarks
 	go test -benchmem -bench '.*' ./benchmark
 
+generate: generate-tests generate-benchmarks ## Generate all test and benchmarks
+
+check-generate-unchanged: check-generate-tests-unchanged check-generate-benchmarks-unchanged
+
 generate-tests: ## Generate encoders and test for test objects
-	go run cmd/skyencoder/skyencoder.go -struct DemoStruct -output-file autogen_demo_struct_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct DemoStructOmitEmpty -output-file autogen_demo_struct_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenStringStruct1 -output-file autogen_max_len_string_struct1_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenStringStruct2 -output-file autogen_max_len_string_struct2_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenAllStruct1 -output-file autogen_max_len_all_struct1_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenAllStruct2 -output-file autogen_max_len_all_struct2_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedSliceStruct1 -output-file autogen_max_len_nested_slice_struct1_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedSliceStruct2 -output-file autogen_max_len_nested_slice_struct2_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapKeyStruct1 -output-file autogen_max_len_nested_map_key_struct1_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapKeyStruct2 -output-file autogen_max_len_nested_map_key_struct2_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapValueStruct1 -output-file autogen_max_len_nested_map_value_struct1_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapValueStruct2 -output-file autogen_max_len_nested_map_value_struct2_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct OnlyOmitEmptyStruct -output-file autogen_only_omit_empty_struct_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct OmitEmptyStruct -output-file autogen_omit_empty_struct_skyencoder_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct OmitEmptyMaxLenStruct1 -output-file autogen_omit_empty_max_len_struct1_test.go github.com/skycoin/skyencoder
-	go run cmd/skyencoder/skyencoder.go -struct OmitEmptyMaxLenStruct2 -output-file autogen_omit_empty_max_len_struct2_test.go github.com/skycoin/skyencoder
+	go run cmd/skyencoder/skyencoder.go -struct DemoStruct -output-file demo_struct_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct DemoStructOmitEmpty -output-file demo_struct_omit_empty_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenStringStruct1 -output-file max_len_string_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenStringStruct2 -output-file max_len_string_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenAllStruct1 -output-file max_len_all_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenAllStruct2 -output-file max_len_all_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedSliceStruct1 -output-file max_len_nested_slice_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedSliceStruct2 -output-file max_len_nested_slice_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapKeyStruct1 -output-file max_len_nested_map_key_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapKeyStruct2 -output-file max_len_nested_map_key_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapValueStruct1 -output-file max_len_nested_map_value_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct MaxLenNestedMapValueStruct2 -output-file max_len_nested_map_value_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct OnlyOmitEmptyStruct -output-file only_omit_empty_struct_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct OmitEmptyStruct -output-file omit_empty_struct_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct OmitEmptyMaxLenStruct1 -output-file omit_empty_max_len_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct OmitEmptyMaxLenStruct2 -output-file omit_empty_max_len_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
 
-check-generate-tests: ## Check that make generate-tests did not change the code
-	@if [ "$(shell git diff ./autogen_demo_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_demo_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_demo_struct_omit_empty_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_demo_struct_omit_empty_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_string_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_string_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_string_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_string_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_all_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_all_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_all_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_all_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_slice_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_slice_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_slice_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_slice_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_key_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_key_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_key_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_key_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_value_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_value_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_value_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_max_len_nested_map_value_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_only_omit_empty_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_only_omit_empty_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_omit_empty_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_omit_empty_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_omit_empty_max_len_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_omit_empty_max_len_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_omit_empty_max_len_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
-	@if [ "$(shell git diff ./autogen_omit_empty_max_len_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+check-generate-tests-unchanged: ## Check that make generate-tests did not change the code
+	@if [ "$(shell git diff ./tests/demo_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/demo_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/demo_struct_omit_empty_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/demo_struct_omit_empty_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_string_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_string_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_string_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_string_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_all_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_all_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_all_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_all_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_slice_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_slice_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_slice_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_slice_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_key_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_key_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_key_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_key_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_value_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_value_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_value_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/max_len_nested_map_value_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/only_omit_empty_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/only_omit_empty_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/omit_empty_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/omit_empty_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/omit_empty_max_len_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/omit_empty_max_len_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/omit_empty_max_len_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/omit_empty_max_len_struct2_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
 
-generate-benchmark-encoder: ## Generate the encoders for the benchmarks
+generate-benchmarks: ## Generate the encoders for the benchmarks
 	go run cmd/skyencoder/skyencoder.go -struct BenchmarkStruct github.com/skycoin/skyencoder/benchmark
 	go run cmd/skyencoder/skyencoder.go -struct SignedBlock -package benchmark -output-path ./benchmark github.com/skycoin/skycoin/src/coin
 
-check-generate-benchmark-encoder-unchanged: ## Check that make generate-benchmark-encoder did not change the code
-	@if [ "$(shell git diff ./benchmark/benchmark_struct_skyencoder.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmark-encoder' ; exit 2 ; fi
-	@if [ "$(shell git diff ./benchmark/benchmark_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmark-encoder' ; exit 2 ; fi
-	@if [ "$(shell git diff ./benchmark/signed_block_skyencoder.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmark-encoder' ; exit 2 ; fi
-	@if [ "$(shell git diff ./benchmark/signed_block_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmark-encoder' ; exit 2 ; fi
+check-generate-benchmarks-unchanged: ## Check that make generate-benchmarks did not change the code
+	@if [ "$(shell git diff ./benchmark/benchmark_struct_skyencoder.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmarks' ; exit 2 ; fi
+	@if [ "$(shell git diff ./benchmark/benchmark_struct_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmarks' ; exit 2 ; fi
+	@if [ "$(shell git diff ./benchmark/signed_block_skyencoder.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmarks' ; exit 2 ; fi
+	@if [ "$(shell git diff ./benchmark/signed_block_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-benchmarks' ; exit 2 ; fi
 
-format:  # Formats the code. Must have goimports installed (use make install-linters).
+format:  ## Formats the code. Must have goimports installed (use make install-linters).
 	# This sorts imports
 	goimports -w .
 	# This performs code simplifications

@@ -999,7 +999,7 @@ func newEmpty%[1]sForEncodeTest() *%[2]s {
 func newRandom%[1]sForEncodeTest(t *testing.T, rand *mathrand.Rand) *%[2]s {
 	var obj %[2]s
 	err := encodertest.PopulateRandom(&obj, rand, encodertest.PopulateRandomOptions{
-		MaxRandLen: 16,
+		MaxRandLen: 4,
 		MinRandLen: 1,
 	})
 	if err != nil {
@@ -1143,7 +1143,6 @@ func decode%[1]sExpectError(t *testing.T, buf []byte, expectedErr error) {
 	}, &obj)
 
 	if err == nil {
-		// TODO -- how about omitempty?
 		t.Fatal("Decode%[1]s: expected error, got nil")
 	}
 
@@ -1248,7 +1247,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, obj *%[2]s) {
 	// A nil buffer cannot decode, unless the object is a struct with a single omitempty field
 	if hasOmitEmptyField(obj) && numEncodableFields(obj) > 1 {
 		t.Run(fmt.Sprintf("%%d buffer underflow nil", k), func(t *testing.T) {
-			decodeOmitEmptyStructExpectError(t, nil, encoder.ErrBufferUnderflow)
+			decode%[1]sExpectError(t, nil, encoder.ErrBufferUnderflow)
 		})
 	}
 
