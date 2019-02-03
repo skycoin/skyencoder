@@ -1,6 +1,7 @@
 package skyencoder
 
 import (
+	"fmt"
 	"go/build"
 	"go/types"
 	"io/ioutil"
@@ -10,9 +11,196 @@ import (
 
 	"golang.org/x/tools/go/loader"
 
-	_ "github.com/skycoin/skycoin/src/cipher/encoder" // needed to verify test output
-	_ "github.com/skycoin/skycoin/src/coin"           // needed to verify test output
+	"github.com/skycoin/skycoin/src/cipher/encoder" // needed to verify test output
+	_ "github.com/skycoin/skycoin/src/coin"         // needed to verify test output
 )
+
+func removeFile(fn string) {
+	os.Remove(fn)
+}
+
+func verifyProgramCompiles(t *testing.T, dir string) {
+	// Load the package with the least restrictive parsing and type checking,
+	// so that a package that doesn't compile can still have a struct declaration extracted
+	cfg := loader.Config{
+		Build:      &build.Default,
+		ParserMode: 0,
+		TypeChecker: types.Config{
+			IgnoreFuncBodies:         false, // ignore functions
+			FakeImportC:              false, // ignore import "C"
+			DisableUnusedImportCheck: false, // ignore unused imports
+		},
+		AllowErrors: false,
+	}
+
+	loadTests := true
+	unused, err := cfg.FromArgs([]string{dir}, loadTests)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(unused) != 0 {
+		t.Fatalf("Had unused args to cfg.FromArgs: %v", unused)
+	}
+
+	_, err = cfg.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func testBuildCode(t *testing.T, structName, filename string) []byte {
+	program, err := LoadProgram([]string{"."}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sInfo, err := FindStructInfoInProgram(program, structName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src, err := BuildStructEncoder(sInfo, "", filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
+	// and clean it up after the test
+	defer removeFile(filename)
+	err = ioutil.WriteFile(filename, src, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyProgramCompiles(t, ".")
+
+	return src
+}
+
+func TestBuildSkycoinSignedBlock(t *testing.T) {
+	importPath := "github.com/skycoin/skycoin/src/coin"
+	structName := "SignedBlock"
+
+	fullPath, err := FindDiskPathOfImport(importPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(fullPath, "signed_block_skyencoder_xxxyyy.go")
+
+	program, err := LoadProgram([]string{importPath}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sInfo, err := FindStructInfoInProgram(program, structName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	src, err := BuildStructEncoder(sInfo, "", filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
+	// and clean it up after the test
+	defer removeFile(filename)
+	err = ioutil.WriteFile(filename, src, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyProgramCompiles(t, importPath)
+}
+
+func testBuildCodeFails(t *testing.T, structName, filename string) {
+	program, err := LoadProgram([]string{"."}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sInfo, err := FindStructInfoInProgram(program, structName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = BuildStructEncoder(sInfo, "", filename)
+	if err == nil {
+		t.Fatal("Expected BuildStructEncoder error")
+	}
+}
+
+/* Invalid structs */
+
+type MaxLenInt struct {
+	Int64 int64 `enc:",maxlen=4"`
+}
+
+type MaxLenInvalid struct {
+	String string `enc:",maxlen=foo"`
+}
+
+type OmitEmptyInt struct {
+	Int64 int64 `enc:',omitempty"`
+}
+
+type OmitEmptyNotFinal struct {
+	Int64  int64
+	Extra  []byte `enc:",omitempty"`
+	String string
+}
+
+type EmptyStructSlice1 struct {
+	Foo []struct{}
+}
+
+type EmptyStructSlice2 struct {
+	Foo []struct {
+		unexported int64
+	}
+}
+
+type EmptyStructSlice3 struct {
+	Foo []struct {
+		Ignored int64 `enc:"-"`
+	}
+}
+
+func TestBuildFails(t *testing.T) {
+	cases := []struct {
+		name string
+	}{
+		{
+			name: "MaxLenInt",
+		},
+		{
+			name: "MaxLenInvalid",
+		},
+		{
+			name: "OmitEmptyInt",
+		},
+		{
+			name: "OmitEmptyNotFinal",
+		},
+		{
+			name: "EmptyStructSlice1",
+		},
+		{
+			name: "EmptyStructSlice2",
+		},
+		{
+			name: "EmptyStructSlice3",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testBuildCodeFails(t, tc.name, fmt.Sprintf("./%s_skyencoder_test.go", ToSnakeCase(tc.name)))
+		})
+	}
+}
+
+/* Demo structs for test generation */
 
 type Coins uint64
 
@@ -105,157 +293,357 @@ type DemoStructOmitEmpty struct {
 	OmitEmpty []byte `enc:",omitempty"`
 }
 
-func removeFile(fn string) {
-	os.Remove(fn)
+/* maxlen tag tests */
+
+type MaxLenStringStruct1 struct {
+	Foo string `enc:",maxlen=3"`
 }
 
-func verifyProgramCompiles(t *testing.T, dir string) {
-	// Load the package with the least restrictive parsing and type checking,
-	// so that a package that doesn't compile can still have a struct declaration extracted
-	cfg := loader.Config{
-		Build:      &build.Default,
-		ParserMode: 0,
-		TypeChecker: types.Config{
-			IgnoreFuncBodies:         false, // ignore functions
-			FakeImportC:              false, // ignore import "C"
-			DisableUnusedImportCheck: false, // ignore unused imports
+type MaxLenStringStruct2 struct {
+	Foo string `enc:",maxlen=4"`
+}
+
+type MaxLenAllStruct1 struct {
+	Foo string           `enc:",maxlen=3"`
+	Bar []int64          `enc:",maxlen=3"`
+	Baz map[uint64]int64 `enc:",maxlen=3"`
+}
+
+type MaxLenAllStruct2 struct {
+	Foo string           `enc:",maxlen=4"`
+	Bar []int64          `enc:",maxlen=4"`
+	Baz map[uint64]int64 `enc:",maxlen=4"`
+}
+
+type MaxLenNestedSliceStruct1 struct {
+	Foo []MaxLenStringStruct1
+}
+
+type MaxLenNestedSliceStruct2 struct {
+	Foo []MaxLenStringStruct2
+}
+
+type MaxLenNestedMapKeyStruct1 struct {
+	Foo map[MaxLenStringStruct1]int64
+}
+
+type MaxLenNestedMapKeyStruct2 struct {
+	Foo map[MaxLenStringStruct2]int64
+}
+
+type MaxLenNestedMapValueStruct1 struct {
+	Foo map[int64]MaxLenStringStruct1
+}
+
+type MaxLenNestedMapValueStruct2 struct {
+	Foo map[int64]MaxLenStringStruct2
+}
+
+type OnlyOmitEmptyStruct struct {
+	Extra []byte `enc:",omitempty"`
+}
+
+type OmitEmptyStruct struct {
+	Foo   string
+	Extra []byte `enc:",omitempty"`
+}
+
+type OmitEmptyMaxLenStruct1 struct {
+	Foo   string
+	Extra []byte `enc:",omitempty,maxlen=3"`
+}
+
+type OmitEmptyMaxLenStruct2 struct {
+	Foo   string
+	Extra []byte `enc:",maxlen=4,omitempty"`
+}
+
+func TestMaxLenStringStructExceeded(t *testing.T) {
+	obj2 := MaxLenStringStruct2{
+		Foo: "1234",
+	}
+
+	n := EncodeSizeMaxLenStringStruct2(&obj2)
+
+	data := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: data[:],
+	}
+
+	err := EncodeMaxLenStringStruct1(e, &MaxLenStringStruct1{
+		Foo: "1234",
+	})
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("EncodeMaxLenStringStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+
+	err = EncodeMaxLenStringStruct2(&encoder.Encoder{
+		Buffer: data[:],
+	}, &MaxLenStringStruct2{
+		Foo: "1234",
+	})
+	if err != nil {
+		t.Fatalf("EncodeMaxLenStringStruct2 unexpected error: %v", err)
+	}
+
+	var obj1 MaxLenStringStruct1
+	err = DecodeMaxLenStringStruct1(&encoder.Decoder{
+		Buffer: data[:],
+	}, &obj1)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("DecodeMaxLenStringStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+}
+
+func testMaxLenAllStructExceeded(t *testing.T, obj1 MaxLenAllStruct1, obj2 MaxLenAllStruct2) {
+	n := EncodeSizeMaxLenAllStruct2(&obj2)
+
+	data := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: data[:],
+	}
+
+	obj1Bad := MaxLenAllStruct1(obj2)
+	err := EncodeMaxLenAllStruct1(e, &obj1Bad)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("EncodeMaxLenAllStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+
+	err = EncodeMaxLenAllStruct2(&encoder.Encoder{
+		Buffer: data[:],
+	}, &obj2)
+	if err != nil {
+		t.Fatalf("EncodeMaxLenAllStruct2 unexpected error: %v", err)
+	}
+
+	var obj1Empty MaxLenAllStruct1
+	err = DecodeMaxLenAllStruct1(&encoder.Decoder{
+		Buffer: data[:],
+	}, &obj1Empty)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("DecodeMaxLenAllStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+}
+
+func TestMaxLenAllStructExceeded(t *testing.T) {
+	cases := []struct {
+		name    string
+		obj1    MaxLenAllStruct1
+		obj1Bad MaxLenAllStruct1
+		obj2    MaxLenAllStruct2
+	}{
+		{
+			name: "string exceeds",
+			obj1: MaxLenAllStruct1{
+				Foo: "123",
+			},
+			obj1Bad: MaxLenAllStruct1{
+				Foo: "123",
+			},
+			obj2: MaxLenAllStruct2{
+				Foo: "1234",
+			},
 		},
-		AllowErrors: false,
+
+		{
+			name: "slice exceeds",
+			obj1: MaxLenAllStruct1{
+				Bar: []int64{1, 2, 3},
+			},
+			obj2: MaxLenAllStruct2{
+				Bar: []int64{1, 2, 3, 4},
+			},
+		},
+
+		{
+			name: "map exceeds",
+			obj1: MaxLenAllStruct1{
+				Baz: map[uint64]int64{
+					1: 2,
+					3: 4,
+					5: 6,
+				},
+			},
+			obj2: MaxLenAllStruct2{
+				Baz: map[uint64]int64{
+					1: 2,
+					3: 4,
+					5: 6,
+					7: 8,
+				},
+			},
+		},
 	}
 
-	loadTests := true
-	unused, err := cfg.FromArgs([]string{dir}, loadTests)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(unused) != 0 {
-		t.Fatalf("Had unused args to cfg.FromArgs: %v", unused)
-	}
-
-	_, err = cfg.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func testBuildCode(t *testing.T, structName, filename string) {
-	program, err := LoadProgram([]string{"."}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sInfo, err := FindTypeInfoInProgram(program, structName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	src, err := BuildTypeEncoder(sInfo, "", filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
-	// and clean it up after the test
-	defer removeFile(filename)
-	err = ioutil.WriteFile(filename, src, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	verifyProgramCompiles(t, ".")
-}
-
-func TestBuildDemoStruct(t *testing.T) {
-	testBuildCode(t, "DemoStruct", "./demo_struct_skyencoder_test.go")
-}
-
-func TestBuildOmitEmptyStruct(t *testing.T) {
-	testBuildCode(t, "DemoStructOmitEmpty", "./demo_struct_omit_empty_skyencoder_test.go")
-}
-
-func TestBuildSkycoinSignedBlock(t *testing.T) {
-	importPath := "github.com/skycoin/skycoin/src/coin"
-	structName := "SignedBlock"
-
-	fullPath, err := FindDiskPathOfImport(importPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	filename := filepath.Join(fullPath, "signed_block_skyencoder_xxxyyy.go")
-
-	program, err := LoadProgram([]string{importPath}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sInfo, err := FindTypeInfoInProgram(program, structName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	src, err := BuildTypeEncoder(sInfo, "", filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Go's parser and loader packages do not accept []byte, only filenames, so save the result to disk
-	// and clean it up after the test
-	defer removeFile(filename)
-	err = ioutil.WriteFile(filename, src, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	verifyProgramCompiles(t, importPath)
-}
-
-func testBuildCodeFails(t *testing.T, structName, filename string) {
-	program, err := LoadProgram([]string{"."}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sInfo, err := FindTypeInfoInProgram(program, structName)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = BuildTypeEncoder(sInfo, "", filename)
-	if err == nil {
-		t.Fatal("Expected BuildTypeEncoder error")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			testMaxLenAllStructExceeded(t, tc.obj1, tc.obj2)
+		})
 	}
 }
 
-type MaxLenInt struct {
-	Int64 int64 `enc:",maxlen=4"`
+func TestNestedMaxLenNestedSliceStruct(t *testing.T) {
+	obj2 := MaxLenNestedSliceStruct2{
+		Foo: []MaxLenStringStruct2{{
+			Foo: "1234",
+		}},
+	}
+
+	n := EncodeSizeMaxLenNestedSliceStruct2(&obj2)
+
+	data := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: data[:],
+	}
+
+	err := EncodeMaxLenNestedSliceStruct1(e, &MaxLenNestedSliceStruct1{
+		Foo: []MaxLenStringStruct1{{
+			Foo: "1234",
+		}},
+	})
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("EncodeMaxLenNestedSliceStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+
+	err = EncodeMaxLenNestedSliceStruct2(&encoder.Encoder{
+		Buffer: data[:],
+	}, &MaxLenNestedSliceStruct2{
+		Foo: []MaxLenStringStruct2{{
+			Foo: "1234",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("EncodeMaxLenStringStruct2 unexpected error: %v", err)
+	}
+
+	var obj1 MaxLenNestedSliceStruct1
+	err = DecodeMaxLenNestedSliceStruct1(&encoder.Decoder{
+		Buffer: data[:],
+	}, &obj1)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("DecodeMaxLenNestedSliceStruct1 expected encoder.ErrMaxLenExceeded")
+	}
 }
 
-func TestBuildMaxLenInt(t *testing.T) {
-	testBuildCodeFails(t, "MaxLenInt", "./max_len_int_skyencoder_test.go")
+func TestNestedMaxLenNestedMapKeyStruct(t *testing.T) {
+	obj2 := MaxLenNestedMapKeyStruct2{
+		Foo: map[MaxLenStringStruct2]int64{
+			{Foo: "1234"}: 1,
+		},
+	}
+
+	n := EncodeSizeMaxLenNestedMapKeyStruct2(&obj2)
+
+	data := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: data[:],
+	}
+
+	err := EncodeMaxLenNestedMapKeyStruct1(e, &MaxLenNestedMapKeyStruct1{
+		Foo: map[MaxLenStringStruct1]int64{
+			{Foo: "1234"}: 1,
+		},
+	})
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("EncodeMaxLenNestedMapKeyStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+
+	err = EncodeMaxLenNestedMapKeyStruct2(&encoder.Encoder{
+		Buffer: data[:],
+	}, &MaxLenNestedMapKeyStruct2{
+		Foo: map[MaxLenStringStruct2]int64{
+			{Foo: "1234"}: 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("EncodeMaxLenStringStruct2 unexpected error: %v", err)
+	}
+
+	var obj1 MaxLenNestedMapKeyStruct1
+	err = DecodeMaxLenNestedMapKeyStruct1(&encoder.Decoder{
+		Buffer: data[:],
+	}, &obj1)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("DecodeMaxLenNestedMapKeyStruct1 expected encoder.ErrMaxLenExceeded")
+	}
 }
 
-type MaxLenInvalid struct {
-	String string `enc:",maxlen=foo"`
+func TestNestedMaxLenNestedMapValueStruct(t *testing.T) {
+	obj2 := MaxLenNestedMapValueStruct2{
+		Foo: map[int64]MaxLenStringStruct2{
+			1: {Foo: "1234"},
+		},
+	}
+
+	n := EncodeSizeMaxLenNestedMapValueStruct2(&obj2)
+
+	data := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: data[:],
+	}
+
+	err := EncodeMaxLenNestedMapValueStruct1(e, &MaxLenNestedMapValueStruct1{
+		Foo: map[int64]MaxLenStringStruct1{
+			1: {Foo: "1234"},
+		},
+	})
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("EncodeMaxLenNestedMapValueStruct1 expected encoder.ErrMaxLenExceeded")
+	}
+
+	err = EncodeMaxLenNestedMapValueStruct2(&encoder.Encoder{
+		Buffer: data[:],
+	}, &MaxLenNestedMapValueStruct2{
+		Foo: map[int64]MaxLenStringStruct2{
+			1: {Foo: "1234"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("EncodeMaxLenStringStruct2 unexpected error: %v", err)
+	}
+
+	var obj1 MaxLenNestedMapValueStruct1
+	err = DecodeMaxLenNestedMapValueStruct1(&encoder.Decoder{
+		Buffer: data[:],
+	}, &obj1)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("DecodeMaxLenNestedMapValueStruct1 expected encoder.ErrMaxLenExceeded")
+	}
 }
 
-func TestBuildMaxLenInvalid(t *testing.T) {
-	testBuildCodeFails(t, "MaxLenInvalid", "./max_len_invalid_skyencoder_test.go")
-}
+func TestOmitEmptyMaxLenStructExceeded(t *testing.T) {
+	obj2 := OmitEmptyMaxLenStruct2{
+		Extra: []byte{1, 2, 3, 4},
+	}
 
-type OmitEmptyInt struct {
-	Int64 int64 `enc:',omitempty"`
-}
+	n := EncodeSizeOmitEmptyMaxLenStruct2(&obj2)
 
-func TestBuildOmitEmptyInt(t *testing.T) {
-	testBuildCodeFails(t, "OmitEmptyInt", "./omit_empty_int_skyencoder_test.go")
-}
+	data := make([]byte, n)
+	e := &encoder.Encoder{
+		Buffer: data[:],
+	}
 
-type OmitEmptyNotFinal struct {
-	Int64  int64
-	Extra  []byte `enc:",omitempty"`
-	String string
-}
+	err := EncodeOmitEmptyMaxLenStruct1(e, &OmitEmptyMaxLenStruct1{
+		Extra: []byte{1, 2, 3, 4},
+	})
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("EncodeOmitEmptyMaxLenStruct1 expected encoder.ErrMaxLenExceeded")
+	}
 
-func TestBuildOmitEmptyNotFinal(t *testing.T) {
-	testBuildCodeFails(t, "OmitEmptyNotFinal", "./omit_empty_not_final_skyencoder_test.go")
+	err = EncodeOmitEmptyMaxLenStruct2(&encoder.Encoder{
+		Buffer: data[:],
+	}, &OmitEmptyMaxLenStruct2{
+		Extra: []byte{1, 2, 3, 4},
+	})
+	if err != nil {
+		t.Fatalf("EncodeOmitEmptyMaxLenStruct2 unexpected error: %v", err)
+	}
+
+	var obj1 OmitEmptyMaxLenStruct1
+	err = DecodeOmitEmptyMaxLenStruct1(&encoder.Decoder{
+		Buffer: data[:],
+	}, &obj1)
+	if err != encoder.ErrMaxLenExceeded {
+		t.Fatal("DecodeOmitEmptyMaxLenStruct1 expected encoder.ErrMaxLenExceeded")
+	}
 }
