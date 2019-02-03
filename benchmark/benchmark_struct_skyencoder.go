@@ -65,8 +65,12 @@ func EncodeSizeBenchmarkStruct(obj *BenchmarkStruct) int {
 	return i0
 }
 
-// EncodeBenchmarkStruct encodes an object of type BenchmarkStruct to the buffer in encoder.Encoder
-func EncodeBenchmarkStruct(e *encoder.Encoder, obj *BenchmarkStruct) error {
+// EncodeBenchmarkStruct encodes an object of type BenchmarkStruct to the buffer in encoder.Encoder.
+// The buffer must be large enough to encode the object, otherwise an error is returned.
+func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
+	e := &encoder.Encoder{
+		Buffer: buf[:],
+	}
 
 	// obj.Int64
 	e.Int64(obj.Int64)
@@ -162,8 +166,14 @@ func EncodeBenchmarkStruct(e *encoder.Encoder, obj *BenchmarkStruct) error {
 	return nil
 }
 
-// DecodeBenchmarkStruct decodes an object of type BenchmarkStruct from the buffer in encoder.Decoder
-func DecodeBenchmarkStruct(d *encoder.Decoder, obj *BenchmarkStruct) error {
+// DecodeBenchmarkStruct decodes an object of type BenchmarkStruct from the buffer in encoder.Decoder.
+// If the buffer has any remaining bytes after decoding, an error is returned,
+// except when conforming to an omitempty declaration on the final field.
+func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
+	d := &encoder.Decoder{
+		Buffer: buf[:],
+	}
+
 	{
 		// obj.Int64
 		i, err := d.Int64()

@@ -321,8 +321,13 @@ func wrapEncodeFunc(typeName, typePackageName, funcBody string) []byte {
 	}
 
 	return []byte(fmt.Sprintf(`
-// Encode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder
-func Encode%[1]s(e *encoder.Encoder, obj *%[3]s) error {
+// Encode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder.
+// The buffer must be large enough to encode the object, otherwise an error is returned.
+func Encode%[1]s(buf []byte, obj *%[3]s) error {
+	e := &encoder.Encoder{
+		Buffer: buf[:],
+	}
+
 	%[2]s
 
 	return nil
@@ -612,8 +617,14 @@ func wrapDecodeFunc(typeName, typePackageName, funcBody string) []byte {
 	}
 
 	return []byte(fmt.Sprintf(`
-// Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder
-func Decode%[1]s(d *encoder.Decoder, obj *%[3]s) error {
+// Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder.
+// If the buffer has any remaining bytes after decoding, an error is returned,
+// except when conforming to an omitempty declaration on the final field.
+func Decode%[1]s(buf []byte, obj *%[3]s) error {
+	d := &encoder.Decoder{
+		Buffer: buf[:],
+	}
+
 	%[2]s
 
 	if len(d.Buffer) != 0 {
@@ -1056,11 +1067,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = Encode%[1]s(e, obj)
+	err = Encode%[1]s(data2, obj)
 	if err != nil {
 		t.Fatalf("Encode%[1]s failed: %%v", err)
 	}
@@ -1085,9 +1092,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	}
 
 	var obj3 %[2]s
-	err = Decode%[1]s(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = Decode%[1]s(data2, &obj3)
 	if err != nil {
 		t.Fatalf("Decode%[1]s failed: %%v", err)
 	}
@@ -1138,9 +1143,7 @@ func TestSkyencoder%[1]s(t *testing.T) {
 
 func decode%[1]sExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj %[2]s
-	err := Decode%[1]s(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := Decode%[1]s(buf, &obj)
 
 	if err == nil {
 		t.Fatal("Decode%[1]s: expected error, got nil")
@@ -1235,11 +1238,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, obj *%[2]s) {
 
 	n := EncodeSize%[1]s(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := Encode%[1]s(e, obj)
+	err := Encode%[1]s(buf, obj)
 	if err != nil {
 		t.Fatalf("Encode%[1]s failed: %%v", err)
 	}

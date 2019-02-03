@@ -80,11 +80,7 @@ func TestEncodeEqual(t *testing.T) {
 
 	data1 := make([]byte, EncodeSizeBenchmarkStruct(bs))
 
-	e := &encoder.Encoder{
-		Buffer: data1[:],
-	}
-
-	err := EncodeBenchmarkStruct(e, bs)
+	err := EncodeBenchmarkStruct(data1, bs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,11 +102,7 @@ func BenchmarkEncode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		e := &encoder.Encoder{
-			Buffer: buf,
-		}
-
-		EncodeBenchmarkStruct(e, bs)
+		EncodeBenchmarkStruct(buf[:], bs)
 	}
 }
 
@@ -122,11 +114,8 @@ func BenchmarkEncodeSizePlusEncode(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		n := EncodeSizeBenchmarkStruct(bs)
-		e := &encoder.Encoder{
-			Buffer: make([]byte, n),
-		}
-
-		EncodeBenchmarkStruct(e, bs)
+		buf := make([]byte, n)
+		EncodeBenchmarkStruct(buf[:], bs)
 	}
 }
 
@@ -157,11 +146,7 @@ func TestDecodeEqual(t *testing.T) {
 	copy(data2[:], data[:])
 
 	var bs1 BenchmarkStruct
-	d := &encoder.Decoder{
-		Buffer: data1[:],
-	}
-
-	err := DecodeBenchmarkStruct(d, &bs1)
+	err := DecodeBenchmarkStruct(data1, &bs1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,9 +238,7 @@ func BenchmarkDecode(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		data2 := data
-		DecodeBenchmarkStruct(&encoder.Decoder{
-			Buffer: data2,
-		}, &bs1)
+		DecodeBenchmarkStruct(data2, &bs1)
 	}
 }
 
@@ -328,11 +311,7 @@ func BenchmarkEncodeSignedBlock(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		e := &encoder.Encoder{
-			Buffer: buf,
-		}
-
-		EncodeSignedBlock(e, bs)
+		EncodeSignedBlock(buf[:], bs)
 	}
 }
 
@@ -344,11 +323,8 @@ func BenchmarkEncodeSizePlusEncodeSignedBlock(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		n := EncodeSizeSignedBlock(bs)
-		e := &encoder.Encoder{
-			Buffer: make([]byte, n),
-		}
-
-		EncodeSignedBlock(e, bs)
+		buf := make([]byte, n)
+		EncodeSignedBlock(buf[:], bs)
 	}
 }
 
@@ -376,9 +352,7 @@ func BenchmarkDecodeSignedBlock(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		data2 := data
-		DecodeSignedBlock(&encoder.Decoder{
-			Buffer: data2,
-		}, &bs1)
+		DecodeSignedBlock(data2, &bs1)
 	}
 }
 

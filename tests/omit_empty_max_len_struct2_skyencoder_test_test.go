@@ -80,11 +80,7 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = EncodeOmitEmptyMaxLenStruct2(e, obj)
+	err = EncodeOmitEmptyMaxLenStruct2(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeOmitEmptyMaxLenStruct2 failed: %v", err)
 	}
@@ -110,9 +106,7 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	}
 
 	var obj3 OmitEmptyMaxLenStruct2
-	err = DecodeOmitEmptyMaxLenStruct2(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = DecodeOmitEmptyMaxLenStruct2(data2, &obj3)
 	if err != nil {
 		t.Fatalf("DecodeOmitEmptyMaxLenStruct2 failed: %v", err)
 	}
@@ -163,9 +157,7 @@ func TestSkyencoderOmitEmptyMaxLenStruct2(t *testing.T) {
 
 func decodeOmitEmptyMaxLenStruct2ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj OmitEmptyMaxLenStruct2
-	err := DecodeOmitEmptyMaxLenStruct2(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := DecodeOmitEmptyMaxLenStruct2(buf, &obj)
 
 	if err == nil {
 		t.Fatal("DecodeOmitEmptyMaxLenStruct2: expected error, got nil")
@@ -260,11 +252,7 @@ func testSkyencoderOmitEmptyMaxLenStruct2DecodeErrors(t *testing.T, k int, obj *
 
 	n := EncodeSizeOmitEmptyMaxLenStruct2(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := EncodeOmitEmptyMaxLenStruct2(e, obj)
+	err := EncodeOmitEmptyMaxLenStruct2(buf, obj)
 	if err != nil {
 		t.Fatalf("EncodeOmitEmptyMaxLenStruct2 failed: %v", err)
 	}

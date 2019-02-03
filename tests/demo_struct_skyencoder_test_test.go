@@ -79,11 +79,7 @@ func testSkyencoderDemoStruct(t *testing.T, obj *DemoStruct) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = EncodeDemoStruct(e, obj)
+	err = EncodeDemoStruct(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeDemoStruct failed: %v", err)
 	}
@@ -105,9 +101,7 @@ func testSkyencoderDemoStruct(t *testing.T, obj *DemoStruct) {
 	}
 
 	var obj3 DemoStruct
-	err = DecodeDemoStruct(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = DecodeDemoStruct(data2, &obj3)
 	if err != nil {
 		t.Fatalf("DecodeDemoStruct failed: %v", err)
 	}
@@ -158,9 +152,7 @@ func TestSkyencoderDemoStruct(t *testing.T) {
 
 func decodeDemoStructExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj DemoStruct
-	err := DecodeDemoStruct(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := DecodeDemoStruct(buf, &obj)
 
 	if err == nil {
 		t.Fatal("DecodeDemoStruct: expected error, got nil")
@@ -255,11 +247,7 @@ func testSkyencoderDemoStructDecodeErrors(t *testing.T, k int, obj *DemoStruct) 
 
 	n := EncodeSizeDemoStruct(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := EncodeDemoStruct(e, obj)
+	err := EncodeDemoStruct(buf, obj)
 	if err != nil {
 		t.Fatalf("EncodeDemoStruct failed: %v", err)
 	}

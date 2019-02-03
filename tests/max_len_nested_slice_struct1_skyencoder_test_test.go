@@ -80,11 +80,7 @@ func testSkyencoderMaxLenNestedSliceStruct1(t *testing.T, obj *MaxLenNestedSlice
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = EncodeMaxLenNestedSliceStruct1(e, obj)
+	err = EncodeMaxLenNestedSliceStruct1(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedSliceStruct1 failed: %v", err)
 	}
@@ -110,9 +106,7 @@ func testSkyencoderMaxLenNestedSliceStruct1(t *testing.T, obj *MaxLenNestedSlice
 	}
 
 	var obj3 MaxLenNestedSliceStruct1
-	err = DecodeMaxLenNestedSliceStruct1(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = DecodeMaxLenNestedSliceStruct1(data2, &obj3)
 	if err != nil {
 		t.Fatalf("DecodeMaxLenNestedSliceStruct1 failed: %v", err)
 	}
@@ -163,9 +157,7 @@ func TestSkyencoderMaxLenNestedSliceStruct1(t *testing.T) {
 
 func decodeMaxLenNestedSliceStruct1ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj MaxLenNestedSliceStruct1
-	err := DecodeMaxLenNestedSliceStruct1(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := DecodeMaxLenNestedSliceStruct1(buf, &obj)
 
 	if err == nil {
 		t.Fatal("DecodeMaxLenNestedSliceStruct1: expected error, got nil")
@@ -260,11 +252,7 @@ func testSkyencoderMaxLenNestedSliceStruct1DecodeErrors(t *testing.T, k int, obj
 
 	n := EncodeSizeMaxLenNestedSliceStruct1(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := EncodeMaxLenNestedSliceStruct1(e, obj)
+	err := EncodeMaxLenNestedSliceStruct1(buf, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedSliceStruct1 failed: %v", err)
 	}

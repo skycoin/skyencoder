@@ -79,11 +79,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct2(t *testing.T, obj *MaxLenNestedMapK
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = EncodeMaxLenNestedMapKeyStruct2(e, obj)
+	err = EncodeMaxLenNestedMapKeyStruct2(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedMapKeyStruct2 failed: %v", err)
 	}
@@ -105,9 +101,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct2(t *testing.T, obj *MaxLenNestedMapK
 	}
 
 	var obj3 MaxLenNestedMapKeyStruct2
-	err = DecodeMaxLenNestedMapKeyStruct2(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = DecodeMaxLenNestedMapKeyStruct2(data2, &obj3)
 	if err != nil {
 		t.Fatalf("DecodeMaxLenNestedMapKeyStruct2 failed: %v", err)
 	}
@@ -158,9 +152,7 @@ func TestSkyencoderMaxLenNestedMapKeyStruct2(t *testing.T) {
 
 func decodeMaxLenNestedMapKeyStruct2ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj MaxLenNestedMapKeyStruct2
-	err := DecodeMaxLenNestedMapKeyStruct2(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := DecodeMaxLenNestedMapKeyStruct2(buf, &obj)
 
 	if err == nil {
 		t.Fatal("DecodeMaxLenNestedMapKeyStruct2: expected error, got nil")
@@ -255,11 +247,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct2DecodeErrors(t *testing.T, k int, ob
 
 	n := EncodeSizeMaxLenNestedMapKeyStruct2(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := EncodeMaxLenNestedMapKeyStruct2(e, obj)
+	err := EncodeMaxLenNestedMapKeyStruct2(buf, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedMapKeyStruct2 failed: %v", err)
 	}

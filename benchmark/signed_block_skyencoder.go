@@ -100,8 +100,12 @@ func EncodeSizeSignedBlock(obj *coin.SignedBlock) int {
 	return i0
 }
 
-// EncodeSignedBlock encodes an object of type SignedBlock to the buffer in encoder.Encoder
-func EncodeSignedBlock(e *encoder.Encoder, obj *coin.SignedBlock) error {
+// EncodeSignedBlock encodes an object of type SignedBlock to the buffer in encoder.Encoder.
+// The buffer must be large enough to encode the object, otherwise an error is returned.
+func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
+	e := &encoder.Encoder{
+		Buffer: buf[:],
+	}
 
 	// obj.Block.Head.Version
 	e.Uint32(obj.Block.Head.Version)
@@ -209,8 +213,14 @@ func EncodeSignedBlock(e *encoder.Encoder, obj *coin.SignedBlock) error {
 	return nil
 }
 
-// DecodeSignedBlock decodes an object of type SignedBlock from the buffer in encoder.Decoder
-func DecodeSignedBlock(d *encoder.Decoder, obj *coin.SignedBlock) error {
+// DecodeSignedBlock decodes an object of type SignedBlock from the buffer in encoder.Decoder.
+// If the buffer has any remaining bytes after decoding, an error is returned,
+// except when conforming to an omitempty declaration on the final field.
+func DecodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
+	d := &encoder.Decoder{
+		Buffer: buf[:],
+	}
+
 	{
 		// obj.Block.Head.Version
 		i, err := d.Uint32()

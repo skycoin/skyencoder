@@ -79,11 +79,7 @@ func testSkyencoderMaxLenAllStruct1(t *testing.T, obj *MaxLenAllStruct1) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = EncodeMaxLenAllStruct1(e, obj)
+	err = EncodeMaxLenAllStruct1(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenAllStruct1 failed: %v", err)
 	}
@@ -105,9 +101,7 @@ func testSkyencoderMaxLenAllStruct1(t *testing.T, obj *MaxLenAllStruct1) {
 	}
 
 	var obj3 MaxLenAllStruct1
-	err = DecodeMaxLenAllStruct1(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = DecodeMaxLenAllStruct1(data2, &obj3)
 	if err != nil {
 		t.Fatalf("DecodeMaxLenAllStruct1 failed: %v", err)
 	}
@@ -158,9 +152,7 @@ func TestSkyencoderMaxLenAllStruct1(t *testing.T) {
 
 func decodeMaxLenAllStruct1ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj MaxLenAllStruct1
-	err := DecodeMaxLenAllStruct1(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := DecodeMaxLenAllStruct1(buf, &obj)
 
 	if err == nil {
 		t.Fatal("DecodeMaxLenAllStruct1: expected error, got nil")
@@ -255,11 +247,7 @@ func testSkyencoderMaxLenAllStruct1DecodeErrors(t *testing.T, k int, obj *MaxLen
 
 	n := EncodeSizeMaxLenAllStruct1(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := EncodeMaxLenAllStruct1(e, obj)
+	err := EncodeMaxLenAllStruct1(buf, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenAllStruct1 failed: %v", err)
 	}

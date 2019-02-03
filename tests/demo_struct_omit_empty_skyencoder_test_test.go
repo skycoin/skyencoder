@@ -80,11 +80,7 @@ func testSkyencoderDemoStructOmitEmpty(t *testing.T, obj *DemoStructOmitEmpty) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	e := &encoder.Encoder{
-		Buffer: data2[:],
-	}
-
-	err = EncodeDemoStructOmitEmpty(e, obj)
+	err = EncodeDemoStructOmitEmpty(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeDemoStructOmitEmpty failed: %v", err)
 	}
@@ -110,9 +106,7 @@ func testSkyencoderDemoStructOmitEmpty(t *testing.T, obj *DemoStructOmitEmpty) {
 	}
 
 	var obj3 DemoStructOmitEmpty
-	err = DecodeDemoStructOmitEmpty(&encoder.Decoder{
-		Buffer: data2[:],
-	}, &obj3)
+	err = DecodeDemoStructOmitEmpty(data2, &obj3)
 	if err != nil {
 		t.Fatalf("DecodeDemoStructOmitEmpty failed: %v", err)
 	}
@@ -163,9 +157,7 @@ func TestSkyencoderDemoStructOmitEmpty(t *testing.T) {
 
 func decodeDemoStructOmitEmptyExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj DemoStructOmitEmpty
-	err := DecodeDemoStructOmitEmpty(&encoder.Decoder{
-		Buffer: buf,
-	}, &obj)
+	err := DecodeDemoStructOmitEmpty(buf, &obj)
 
 	if err == nil {
 		t.Fatal("DecodeDemoStructOmitEmpty: expected error, got nil")
@@ -260,11 +252,7 @@ func testSkyencoderDemoStructOmitEmptyDecodeErrors(t *testing.T, k int, obj *Dem
 
 	n := EncodeSizeDemoStructOmitEmpty(obj)
 	buf := make([]byte, n)
-	e := &encoder.Encoder{
-		Buffer: buf[:],
-	}
-
-	err := EncodeDemoStructOmitEmpty(e, obj)
+	err := EncodeDemoStructOmitEmpty(buf, obj)
 	if err != nil {
 		t.Fatalf("EncodeDemoStructOmitEmpty failed: %v", err)
 	}
