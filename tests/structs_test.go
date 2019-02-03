@@ -30,7 +30,7 @@ func TestMaxLenStringStructExceeded(t *testing.T) {
 	}
 
 	var obj1 MaxLenStringStruct1
-	err = DecodeMaxLenStringStruct1(data[:], &obj1)
+	_, err = DecodeMaxLenStringStruct1(data[:], &obj1)
 	if err != encoder.ErrMaxLenExceeded {
 		t.Fatal("DecodeMaxLenStringStruct1 expected encoder.ErrMaxLenExceeded")
 	}
@@ -53,7 +53,7 @@ func testMaxLenAllStructExceeded(t *testing.T, obj1 MaxLenAllStruct1, obj2 MaxLe
 	}
 
 	var obj1Empty MaxLenAllStruct1
-	err = DecodeMaxLenAllStruct1(data[:], &obj1Empty)
+	_, err = DecodeMaxLenAllStruct1(data[:], &obj1Empty)
 	if err != encoder.ErrMaxLenExceeded {
 		t.Fatal("DecodeMaxLenAllStruct1 expected encoder.ErrMaxLenExceeded")
 	}
@@ -146,7 +146,7 @@ func TestNestedMaxLenNestedSliceStruct(t *testing.T) {
 	}
 
 	var obj1 MaxLenNestedSliceStruct1
-	err = DecodeMaxLenNestedSliceStruct1(data[:], &obj1)
+	_, err = DecodeMaxLenNestedSliceStruct1(data[:], &obj1)
 	if err != encoder.ErrMaxLenExceeded {
 		t.Fatal("DecodeMaxLenNestedSliceStruct1 expected encoder.ErrMaxLenExceeded")
 	}
@@ -182,7 +182,7 @@ func TestNestedMaxLenNestedMapKeyStruct(t *testing.T) {
 	}
 
 	var obj1 MaxLenNestedMapKeyStruct1
-	err = DecodeMaxLenNestedMapKeyStruct1(data[:], &obj1)
+	_, err = DecodeMaxLenNestedMapKeyStruct1(data[:], &obj1)
 	if err != encoder.ErrMaxLenExceeded {
 		t.Fatal("DecodeMaxLenNestedMapKeyStruct1 expected encoder.ErrMaxLenExceeded")
 	}
@@ -218,7 +218,7 @@ func TestNestedMaxLenNestedMapValueStruct(t *testing.T) {
 	}
 
 	var obj1 MaxLenNestedMapValueStruct1
-	err = DecodeMaxLenNestedMapValueStruct1(data[:], &obj1)
+	_, err = DecodeMaxLenNestedMapValueStruct1(data[:], &obj1)
 	if err != encoder.ErrMaxLenExceeded {
 		t.Fatal("DecodeMaxLenNestedMapValueStruct1 expected encoder.ErrMaxLenExceeded")
 	}
@@ -248,7 +248,7 @@ func TestOmitEmptyMaxLenStructExceeded(t *testing.T) {
 	}
 
 	var obj1 OmitEmptyMaxLenStruct1
-	err = DecodeOmitEmptyMaxLenStruct1(data[:], &obj1)
+	_, err = DecodeOmitEmptyMaxLenStruct1(data[:], &obj1)
 	if err != encoder.ErrMaxLenExceeded {
 		t.Fatal("DecodeOmitEmptyMaxLenStruct1 expected encoder.ErrMaxLenExceeded")
 	}

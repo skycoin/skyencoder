@@ -618,20 +618,15 @@ func wrapDecodeFunc(typeName, typePackageName, funcBody string) []byte {
 
 	return []byte(fmt.Sprintf(`
 // Decode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder.
-// If the buffer has any remaining bytes after decoding, an error is returned,
-// except when conforming to an omitempty declaration on the final field.
-func Decode%[1]s(buf []byte, obj *%[3]s) error {
+// Returns the number of bytes used from the buffer to decode the object.
+func Decode%[1]s(buf []byte, obj *%[3]s) (int, error) {
 	d := &encoder.Decoder{
 		Buffer: buf[:],
 	}
 
 	%[2]s
 
-	if len(d.Buffer) != 0 {
-		return encoder.ErrRemainingBytes
-	}
-
-	return nil
+	return len(buf) - len(d.Buffer), nil
 }
 `, typeName, funcBody, fullTypeName))
 }
@@ -645,7 +640,7 @@ func buildDecodeBool(name string, castType bool, typeName string, options *Optio
 	// %[1]s
 	i, err := d.Bool()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -661,7 +656,7 @@ func buildDecodeUint8(name string, castType bool, typeName string, options *Opti
 	// %[1]s
 	i, err := d.Uint8()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}`, name, assign)
@@ -676,7 +671,7 @@ func buildDecodeUint16(name string, castType bool, typeName string, options *Opt
 	// %[1]s
 	i, err := d.Uint16()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -692,7 +687,7 @@ func buildDecodeUint32(name string, castType bool, typeName string, options *Opt
 	// %[1]s
 	i, err := d.Uint32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -708,7 +703,7 @@ func buildDecodeUint64(name string, castType bool, typeName string, options *Opt
 	// %[1]s
 	i, err := d.Uint64()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -724,7 +719,7 @@ func buildDecodeInt8(name string, castType bool, typeName string, options *Optio
 	// %[1]s
 	i, err := d.Int8()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -740,7 +735,7 @@ func buildDecodeInt16(name string, castType bool, typeName string, options *Opti
 	// %[1]s
 	i, err := d.Int16()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -756,7 +751,7 @@ func buildDecodeInt32(name string, castType bool, typeName string, options *Opti
 	// %[1]s
 	i, err := d.Int32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -772,7 +767,7 @@ func buildDecodeInt64(name string, castType bool, typeName string, options *Opti
 	// %[1]s
 	i, err := d.Int64()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = %[2]s
 	}
@@ -788,7 +783,7 @@ func buildDecodeFloat32(name string, castType bool, typeName string, options *Op
 	// %[1]s
 	i, err := d.Uint32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = math.Float32frombits(%[2]s)
 	}
@@ -804,7 +799,7 @@ func buildDecodeFloat64(name string, castType bool, typeName string, options *Op
 	// %[1]s
 	i, err := d.Uint64()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 	%[1]s = math.Float64frombits(%[2]s)
 	}
@@ -819,12 +814,12 @@ func buildDecodeString(name string, options *Options) string {
 
 	ul, err := d.Uint32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return encoder.ErrBufferUnderflow
+		return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
 	}
 
 	%[2]s
@@ -838,7 +833,7 @@ func buildDecodeByteArray(name string, options *Options) string {
 	return fmt.Sprintf(`{
 	// %[1]s
 	if len(d.Buffer) < len(%[1]s) {
-		return encoder.ErrBufferUnderflow
+		return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
 	}
 	copy(%[1]s[:], d.Buffer[:len(%[1]s)])
 	d.Buffer = d.Buffer[len(%[1]s):]
@@ -864,12 +859,12 @@ func buildDecodeByteSlice(name string, options *Options) string {
 
 	ul, err := d.Uint32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return encoder.ErrBufferUnderflow
+		return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
 	}
 
 	%[2]s
@@ -891,12 +886,12 @@ func buildDecodeSlice(name, elemCounterName, elemVarName, elemSection, typeName 
 
 	ul, err := d.Uint32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return encoder.ErrBufferUnderflow
+		return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
 	}
 
 	%[6]s
@@ -919,12 +914,12 @@ func buildDecodeMap(name, keyVarName, elemVarName, keyType, elemType, keySection
 
 	ul, err := d.Uint32()
 	if err != nil {
-		return err
+		return len(buf) - len(d.Buffer), err
 	}
 
 	length := int(ul)
 	if length < 0 || length > len(d.Buffer) {
-		return encoder.ErrBufferUnderflow
+		return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
 	}
 
 	%[7]s
@@ -938,7 +933,7 @@ func buildDecodeMap(name, keyVarName, elemVarName, keyType, elemType, keySection
 			%[4]s
 
 			if _, ok := %[1]s[%[2]s]; ok {
-				return encoder.ErrMapDuplicateKeys
+				return len(buf) - len(d.Buffer), encoder.ErrMapDuplicateKeys
 			}
 
 			var %[3]s %[10]s
@@ -954,7 +949,7 @@ func buildDecodeMap(name, keyVarName, elemVarName, keyType, elemType, keySection
 func decodeMaxLengthCheck(options *Options) string {
 	if options != nil && options.MaxLength > 0 {
 		return fmt.Sprintf(`if length > %d {
-			return encoder.ErrMaxLenExceeded
+			return len(buf) - len(d.Buffer), encoder.ErrMaxLenExceeded
 		}`, options.MaxLength)
 	}
 
@@ -964,7 +959,7 @@ func decodeMaxLengthCheck(options *Options) string {
 func decodeOmitEmptyCheck(options *Options) string {
 	if options != nil && options.OmitEmpty {
 		return `if len(d.Buffer) == 0 {
-			return nil
+			return len(buf) - len(d.Buffer), nil
 		}`
 	}
 
@@ -1088,13 +1083,85 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	}
 
 	var obj3 %[2]s
-	err = Decode%[1]s(data2, &obj3)
+	n, err := Decode%[1]s(data2, &obj3)
 	if err != nil {
 		t.Fatalf("Decode%[1]s failed: %%v", err)
+	}
+	if n != len(data2) {
+		t.Fatalf("Decode%[1]s bytes read length should be %%d, is %%d", len(data2), n)
 	}
 
 	if !cmp.Equal(obj2, obj3, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
 		t.Fatal("encoder.DeserializeRaw() != Decode%[1]s()")
+	}
+
+	isEncodableField := func(f reflect.StructField) bool {
+		// Skip unexported fields
+		if f.PkgPath != "" {
+			return false
+		}
+
+		// Skip fields disabled with and enc:"- struct tag
+		tag := f.Tag.Get("enc")
+		return !strings.HasPrefix(tag, "-,") && tag != "-"
+	}
+
+	hasOmitEmptyField := func(obj interface{}) bool {
+		v := reflect.ValueOf(obj)
+		switch v.Kind() {
+		case reflect.Ptr:
+			v = v.Elem()
+		}
+
+		switch v.Kind() {
+		case reflect.Struct:
+			t := v.Type()
+			n := v.NumField()
+			f := t.Field(n - 1)
+			tag := f.Tag.Get("enc")
+			return isEncodableField(f) && strings.Contains(tag, ",omitempty")
+		default:
+			return false
+		}
+	}
+
+	// returns the number of bytes encoded by an omitempty field on a given object
+	omitEmptyLen := func(obj interface{}) int {
+		if !hasOmitEmptyField(obj) {
+			return 0
+		}
+
+		v := reflect.ValueOf(obj)
+		switch v.Kind() {
+		case reflect.Ptr:
+			v = v.Elem()
+		}
+
+		switch v.Kind() {
+		case reflect.Struct:
+			n := v.NumField()
+			f := v.Field(n - 1)
+			if f.Len() == 0 {
+				return 0
+			}
+			return 4 + f.Len()
+
+		default:
+			return 0
+		}
+	}
+
+	// Check that the bytes read value is correct when providing an extended buffer
+	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
+		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
+		data3 := append(data2[:], padding...)
+		n, err = Decode%[1]s(data3, &obj3)
+		if err != nil {
+			t.Fatalf("Decode%[1]s failed: %%v", err)
+		}
+		if n != len(data2) {
+			t.Fatalf("Decode%[1]s bytes read length should be %%d, is %%d", len(data2), n)
+		}
 	}
 }
 
@@ -1139,7 +1206,7 @@ func TestSkyencoder%[1]s(t *testing.T) {
 
 func decode%[1]sExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj %[2]s
-	err := Decode%[1]s(buf, &obj)
+	_, err := Decode%[1]s(buf, &obj)
 
 	if err == nil {
 		t.Fatal("Decode%[1]s: expected error, got nil")
@@ -1150,7 +1217,7 @@ func decode%[1]sExpectError(t *testing.T, buf []byte, expectedErr error) {
 	}
 }
 
-func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, obj *%[2]s) {
+func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, tag string, obj *%[2]s) {
 	isEncodableField := func(f reflect.StructField) bool {
 		// Skip unexported fields
 		if f.PkgPath != "" {
@@ -1241,7 +1308,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, obj *%[2]s) {
 
 	// A nil buffer cannot decode, unless the object is a struct with a single omitempty field
 	if hasOmitEmptyField(obj) && numEncodableFields(obj) > 1 {
-		t.Run(fmt.Sprintf("%%d buffer underflow nil", k), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%%d %%s buffer underflow nil", k, tag), func(t *testing.T) {
 			decode%[1]sExpectError(t, nil, encoder.ErrBufferUnderflow)
 		})
 	}
@@ -1253,7 +1320,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, obj *%[2]s) {
 		if i == skipN {
 			continue
 		}
-		t.Run(fmt.Sprintf("%%d buffer underflow bytes=%%d", k, i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%%d %%s buffer underflow bytes=%%d", k, tag, i), func(t *testing.T) {
 			decode%[1]sExpectError(t, buf[:i], encoder.ErrBufferUnderflow)
 		})
 	}
@@ -1266,12 +1333,6 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, obj *%[2]s) {
 	} else {
 		buf = append(buf, 0)
 	}
-
-	// Buffer too long
-	buf = append(buf, 0)
-	t.Run(fmt.Sprintf("%%d remaining bytes", k), func(t *testing.T) {
-		decode%[1]sExpectError(t, buf[:], encoder.ErrRemainingBytes)
-	})
 }
 
 func TestSkyencoder%[1]sDecodeErrors(t *testing.T) {
@@ -1281,8 +1342,8 @@ func TestSkyencoder%[1]sDecodeErrors(t *testing.T) {
 	for i := 0; i < n; i++ {
 		emptyObj := newEmpty%[1]sForEncodeTest()
 		fullObj := newRandom%[1]sForEncodeTest(t, rand)
-		testSkyencoder%[1]sDecodeErrors(t, i, emptyObj)
-		testSkyencoder%[1]sDecodeErrors(t, i, fullObj)
+		testSkyencoder%[1]sDecodeErrors(t, i, "empty", emptyObj)
+		testSkyencoder%[1]sDecodeErrors(t, i, "full", fullObj)
 	}
 }
 

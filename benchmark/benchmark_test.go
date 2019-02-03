@@ -143,9 +143,12 @@ func TestDecodeEqual(t *testing.T) {
 	copy(data2[:], data[:])
 
 	var bs1 BenchmarkStruct
-	err := DecodeBenchmarkStruct(data1, &bs1)
+	n, err := DecodeBenchmarkStruct(data1, &bs1)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if n != len(data1) {
+		t.Fatalf("DecodeBenchmarkStruct n should be %d, is %d", len(data1), n)
 	}
 
 	var bs2 BenchmarkStruct
