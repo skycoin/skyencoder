@@ -93,7 +93,7 @@ func main() {
 
 	program, err := skyencoder.LoadProgram(args, tags)
 	if err != nil {
-		log.Fatal("skyencoder.LoadProgram failed:", err)
+		log.Fatal("skyencoder.LoadProgram failed: ", err)
 	}
 
 	debugPrintln("args:", args)
@@ -103,7 +103,7 @@ func main() {
 		log.Fatalf("Program did not contain valid struct for name %s: %v", *structName, err)
 	}
 	if structInfo == nil {
-		log.Fatal("Program does not contain struct:", *structName)
+		log.Fatal("Program does not contain struct: ", *structName)
 	}
 
 	// Determine if the arg is a directory or multiple files
@@ -130,14 +130,14 @@ func main() {
 
 	src, err := skyencoder.BuildStructEncoder(structInfo, *destPackage, fmtFilename)
 	if err != nil {
-		log.Fatal("skyencoder.BuildStructEncoder failed:", err)
+		log.Fatal("skyencoder.BuildStructEncoder failed: ", err)
 	}
 
 	var testSrc []byte
 	if !*noTest {
 		testSrc, err = skyencoder.BuildStructEncoderTest(structInfo, *destPackage, fmtFilename)
 		if err != nil {
-			log.Fatal("skyencoder.BuildStructEncoderTest failed:", err)
+			log.Fatal("skyencoder.BuildStructEncoderTest failed: ", err)
 		}
 	}
 
@@ -161,7 +161,7 @@ func main() {
 	}
 
 	if err := ioutil.WriteFile(outputFn, src, 0644); err != nil {
-		log.Fatal("ioutil.WriteFile failed:", err)
+		log.Fatal("ioutil.WriteFile failed: ", err)
 	}
 
 	if !*noTest {
@@ -174,7 +174,7 @@ func main() {
 		}
 
 		if err := ioutil.WriteFile(testOutputFn, testSrc, 0644); err != nil {
-			log.Fatal("ioutil.WriteFile failed:", err)
+			log.Fatal("ioutil.WriteFile failed: ", err)
 		}
 	}
 }
