@@ -63,11 +63,7 @@ func newRandomZeroLenNilMaxLenAllStruct1ForEncodeTest(t *testing.T, rand *mathra
 func testSkyencoderMaxLenAllStruct1(t *testing.T, obj *MaxLenAllStruct1) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeMaxLenAllStruct1(obj)
 
 	if n1 != n2 {
@@ -79,7 +75,7 @@ func testSkyencoderMaxLenAllStruct1(t *testing.T, obj *MaxLenAllStruct1) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeMaxLenAllStruct1(data2, obj)
+	err := EncodeMaxLenAllStruct1(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenAllStruct1 failed: %v", err)
 	}

@@ -64,11 +64,7 @@ func newRandomZeroLenNilOmitEmptyStructForEncodeTest(t *testing.T, rand *mathran
 func testSkyencoderOmitEmptyStruct(t *testing.T, obj *OmitEmptyStruct) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeOmitEmptyStruct(obj)
 
 	if n1 != n2 {
@@ -80,7 +76,7 @@ func testSkyencoderOmitEmptyStruct(t *testing.T, obj *OmitEmptyStruct) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeOmitEmptyStruct(data2, obj)
+	err := EncodeOmitEmptyStruct(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeOmitEmptyStruct failed: %v", err)
 	}

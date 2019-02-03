@@ -46,10 +46,7 @@ func newBenchmarkStruct() *BenchmarkStruct {
 func TestEncodeSizeEqual(t *testing.T) {
 	bs := newBenchmarkStruct()
 	n1 := EncodeSizeBenchmarkStruct(bs)
-	n2, err := encoder.Size(bs)
-	if err != nil {
-		t.Fatal(err)
-	}
+	n2 := encoder.Size(bs)
 	if n1 != n2 {
 		t.Fatalf("Encode size does not match (%d != %d)", n1, n2)
 	}

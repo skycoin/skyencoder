@@ -63,11 +63,7 @@ func newRandomZeroLenNilMaxLenNestedMapKeyStruct1ForEncodeTest(t *testing.T, ran
 func testSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T, obj *MaxLenNestedMapKeyStruct1) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeMaxLenNestedMapKeyStruct1(obj)
 
 	if n1 != n2 {
@@ -79,7 +75,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T, obj *MaxLenNestedMapK
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeMaxLenNestedMapKeyStruct1(data2, obj)
+	err := EncodeMaxLenNestedMapKeyStruct1(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedMapKeyStruct1 failed: %v", err)
 	}

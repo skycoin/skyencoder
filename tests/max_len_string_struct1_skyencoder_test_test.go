@@ -64,11 +64,7 @@ func newRandomZeroLenNilMaxLenStringStruct1ForEncodeTest(t *testing.T, rand *mat
 func testSkyencoderMaxLenStringStruct1(t *testing.T, obj *MaxLenStringStruct1) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeMaxLenStringStruct1(obj)
 
 	if n1 != n2 {
@@ -80,7 +76,7 @@ func testSkyencoderMaxLenStringStruct1(t *testing.T, obj *MaxLenStringStruct1) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeMaxLenStringStruct1(data2, obj)
+	err := EncodeMaxLenStringStruct1(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenStringStruct1 failed: %v", err)
 	}

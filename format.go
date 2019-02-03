@@ -1051,11 +1051,7 @@ func newRandomZeroLenNil%[1]sForEncodeTest(t *testing.T, rand *mathrand.Rand) *%
 func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %%v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSize%[1]s(obj)
 
 	if n1 != n2 {
@@ -1067,7 +1063,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = Encode%[1]s(data2, obj)
+	err := Encode%[1]s(data2, obj)
 	if err != nil {
 		t.Fatalf("Encode%[1]s failed: %%v", err)
 	}

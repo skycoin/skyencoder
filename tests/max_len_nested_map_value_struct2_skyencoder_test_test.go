@@ -63,11 +63,7 @@ func newRandomZeroLenNilMaxLenNestedMapValueStruct2ForEncodeTest(t *testing.T, r
 func testSkyencoderMaxLenNestedMapValueStruct2(t *testing.T, obj *MaxLenNestedMapValueStruct2) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeMaxLenNestedMapValueStruct2(obj)
 
 	if n1 != n2 {
@@ -79,7 +75,7 @@ func testSkyencoderMaxLenNestedMapValueStruct2(t *testing.T, obj *MaxLenNestedMa
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeMaxLenNestedMapValueStruct2(data2, obj)
+	err := EncodeMaxLenNestedMapValueStruct2(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedMapValueStruct2 failed: %v", err)
 	}

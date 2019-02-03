@@ -64,11 +64,7 @@ func newRandomZeroLenNilMaxLenNestedSliceStruct2ForEncodeTest(t *testing.T, rand
 func testSkyencoderMaxLenNestedSliceStruct2(t *testing.T, obj *MaxLenNestedSliceStruct2) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeMaxLenNestedSliceStruct2(obj)
 
 	if n1 != n2 {
@@ -80,7 +76,7 @@ func testSkyencoderMaxLenNestedSliceStruct2(t *testing.T, obj *MaxLenNestedSlice
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeMaxLenNestedSliceStruct2(data2, obj)
+	err := EncodeMaxLenNestedSliceStruct2(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeMaxLenNestedSliceStruct2 failed: %v", err)
 	}

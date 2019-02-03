@@ -128,6 +128,11 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 	// obj.Block.Head.UxHash
 	e.CopyBytes(obj.Block.Head.UxHash[:])
 
+	// obj.Block.Body.Transactions maxlen check
+	if len(obj.Block.Body.Transactions) > 65535 {
+		return encoder.ErrMaxLenExceeded
+	}
+
 	// obj.Block.Body.Transactions length check
 	if len(obj.Block.Body.Transactions) > math.MaxUint32 {
 		return errors.New("obj.Block.Body.Transactions length exceeds math.MaxUint32")
@@ -148,6 +153,11 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 		// x.InnerHash
 		e.CopyBytes(x.InnerHash[:])
 
+		// x.Sigs maxlen check
+		if len(x.Sigs) > 65535 {
+			return encoder.ErrMaxLenExceeded
+		}
+
 		// x.Sigs length check
 		if len(x.Sigs) > math.MaxUint32 {
 			return errors.New("x.Sigs length exceeds math.MaxUint32")
@@ -164,6 +174,11 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 
 		}
 
+		// x.In maxlen check
+		if len(x.In) > 65535 {
+			return encoder.ErrMaxLenExceeded
+		}
+
 		// x.In length check
 		if len(x.In) > math.MaxUint32 {
 			return errors.New("x.In length exceeds math.MaxUint32")
@@ -178,6 +193,11 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 			// x
 			e.CopyBytes(x[:])
 
+		}
+
+		// x.Out maxlen check
+		if len(x.Out) > 65535 {
+			return encoder.ErrMaxLenExceeded
 		}
 
 		// x.Out length check
@@ -297,6 +317,10 @@ func DecodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 			return encoder.ErrBufferUnderflow
 		}
 
+		if length > 65535 {
+			return encoder.ErrMaxLenExceeded
+		}
+
 		if length != 0 {
 			obj.Block.Body.Transactions = make([]coin.Transaction, length)
 
@@ -341,6 +365,10 @@ func DecodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 						return encoder.ErrBufferUnderflow
 					}
 
+					if length > 65535 {
+						return encoder.ErrMaxLenExceeded
+					}
+
 					if length != 0 {
 						obj.Block.Body.Transactions[z3].Sigs = make([]cipher.Sig, length)
 
@@ -371,6 +399,10 @@ func DecodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 						return encoder.ErrBufferUnderflow
 					}
 
+					if length > 65535 {
+						return encoder.ErrMaxLenExceeded
+					}
+
 					if length != 0 {
 						obj.Block.Body.Transactions[z3].In = make([]cipher.SHA256, length)
 
@@ -399,6 +431,10 @@ func DecodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 					length := int(ul)
 					if length < 0 || length > len(d.Buffer) {
 						return encoder.ErrBufferUnderflow
+					}
+
+					if length > 65535 {
+						return encoder.ErrMaxLenExceeded
 					}
 
 					if length != 0 {

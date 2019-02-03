@@ -64,11 +64,7 @@ func newRandomZeroLenNilOmitEmptyMaxLenStruct2ForEncodeTest(t *testing.T, rand *
 func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStruct2) {
 	// EncodeSize
 
-	n1, err := encoder.Size(obj)
-	if err != nil {
-		t.Fatalf("encoder.Size failed: %v", err)
-	}
-
+	n1 := encoder.Size(obj)
 	n2 := EncodeSizeOmitEmptyMaxLenStruct2(obj)
 
 	if n1 != n2 {
@@ -80,7 +76,7 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err = EncodeOmitEmptyMaxLenStruct2(data2, obj)
+	err := EncodeOmitEmptyMaxLenStruct2(data2, obj)
 	if err != nil {
 		t.Fatalf("EncodeOmitEmptyMaxLenStruct2 failed: %v", err)
 	}
