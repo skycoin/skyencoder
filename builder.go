@@ -150,30 +150,26 @@ func FindStructInfoInProgram(p *loader.Program, name string) (*StructInfo, error
 }
 
 func findStructInPackage(p *loader.PackageInfo, name string) (*types.Struct, error) {
-loop:
-	for _, v := range p.Defs {
-		if v == nil {
-			continue
-		}
-
-		t := v.Type()
-		switch x := t.(type) {
-		case *types.Named:
-			obj := x.Obj()
-			if obj.Name() != name {
-				continue loop
-			}
-			st := x.Underlying()
-			switch y := st.(type) {
-			case *types.Struct:
-				return y, nil
-			default:
-				return nil, fmt.Errorf("Found type with name %s but underlying type is %T, not struct", name, y)
-			}
-		}
+	obj := p.Pkg.Scope().Lookup(name)
+	if obj == nil {
+		return nil, nil
 	}
 
-	return nil, nil
+	t := obj.Type()
+	switch x := t.(type) {
+	case *types.Named:
+		t = x.Underlying()
+		switch y := t.(type) {
+		case *types.Struct:
+			return y, nil
+		default:
+			return nil, fmt.Errorf("Found type with name %s but underlying type is %T, not struct", name, y)
+		}
+	case *types.Struct:
+		return x, nil
+	default:
+		return nil, fmt.Errorf("Found type with name %s but underlying type is %T, not struct", name, x)
+	}
 }
 
 // BuildStructEncoder builds formatted source code for encoding/decoding a type.

@@ -14,13 +14,6 @@ import (
 
 /* TODO
 
-- change encode/decode methods to take []byte
-
-IN SKYCOIN:
-
-- put maxlen on coin structs
-- add skycoin tests (verify entire db can be loaded)
-
 TO DOCUMENT:
 
 - (wiki) document encoding format
