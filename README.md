@@ -109,6 +109,11 @@ Notes:
 Benchmarks compare the reflect-based `github.com/skycoin/skycoin/src/cipher/encoder` to the generated encoder.
 Benchmarks performed on a Mid-2015 base model 15" Macbook Pro.
 
+Comparison of `skyencoder` to other encoders is available at:
+
+* https://github.com/gz-c/skycoin-serialization-benchmarks
+* https://github.com/gz-c/gosercomp
+
 ```
 » make bench
 go test -benchmem -bench '.*' ./benchmark

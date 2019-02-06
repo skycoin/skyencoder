@@ -22,10 +22,6 @@ TO DOCUMENT:
 - decoding specifics (empty map/slice are always left nil)
 - []struct{} cannot be properly decoded since it is empty
 
-OTHER:
-
-- add to the benchmark repo
-
 */
 
 const debug = false
