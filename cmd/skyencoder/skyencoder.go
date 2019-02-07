@@ -12,18 +12,6 @@ import (
 	"github.com/skycoin/skyencoder"
 )
 
-/* TODO
-
-TO DOCUMENT:
-
-- (wiki) document encoding format
-- (wiki) document usage in golang (maxlen, omitempty, "-", ignores unexported fields)
-- omitempty can only be used in the last field of a struct and only at a toplevel struct
-- decoding specifics (empty map/slice are always left nil)
-- []struct{} cannot be properly decoded since it is empty
-
-*/
-
 const debug = false
 
 func debugPrintln(args ...interface{}) {
