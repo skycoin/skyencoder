@@ -6,7 +6,7 @@ Code-generation based encoder for Skycoin
 
 ## Introduction
 
-`skyencoder` generates a file with encode and decode methods for an encodable struct, using the [Skycoin encoding format](github.com/skycoin/skycoin/wiki/encoder).
+`skyencoder` generates a file with encode and decode methods for an encodable struct, using the [Skycoin binary encoding format](https://github.com/skycoin/skycoin/wiki/Skycoin-Binary-Encoding-Format).
 
 For encodable non-struct types, you can wrap the non-struct type in a struct for the same result. A struct definition adds no overhead and does not change the encoding.
 
