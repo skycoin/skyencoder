@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: build test bench generate-tests check-generate-tests-unchanged
+.PHONY: build test test-386 test-amd64 bench
+.PHONY: generate-tests check-generate-tests-unchanged
 .PHONY: generate-benchmarks check-generate-benchmarks-unchanged
 .PHONY: format help
 
@@ -9,7 +10,13 @@ build: ## Build skyencoder binary
 test: ## Run tests
 	go test ./...
 
-check: generate check-generate-unchanged test ## Run tests and check code generation
+test-386: ## Run tests on 386 arch
+	GOARCH=386 go test ./...
+
+test-amd64: ## Run tests on 386 arch
+	GOARCH=amd64 go test ./...
+
+check: generate check-generate-unchanged test-386 test-amd64 ## Run tests and check code generation
 
 bench: ## Run benchmarks
 	go test -benchmem -bench '.*' ./benchmark

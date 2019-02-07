@@ -11,8 +11,8 @@ import (
 )
 
 // EncodeSizeSignedBlock computes the size of an encoded object of type SignedBlock
-func EncodeSizeSignedBlock(obj *coin.SignedBlock) int {
-	i0 := 0
+func EncodeSizeSignedBlock(obj *coin.SignedBlock) uint64 {
+	i0 := uint64(0)
 
 	// obj.Block.Head.Version
 	i0 += 4
@@ -38,7 +38,7 @@ func EncodeSizeSignedBlock(obj *coin.SignedBlock) int {
 	// obj.Block.Body.Transactions
 	i0 += 4
 	for _, x := range obj.Block.Body.Transactions {
-		i1 := 0
+		i1 := uint64(0)
 
 		// x.Length
 		i1 += 4
@@ -52,29 +52,29 @@ func EncodeSizeSignedBlock(obj *coin.SignedBlock) int {
 		// x.Sigs
 		i1 += 4
 		{
-			i2 := 0
+			i2 := uint64(0)
 
 			// x
 			i2 += 65
 
-			i1 += len(x.Sigs) * i2
+			i1 += uint64(len(x.Sigs)) * i2
 		}
 
 		// x.In
 		i1 += 4
 		{
-			i2 := 0
+			i2 := uint64(0)
 
 			// x
 			i2 += 32
 
-			i1 += len(x.In) * i2
+			i1 += uint64(len(x.In)) * i2
 		}
 
 		// x.Out
 		i1 += 4
 		{
-			i2 := 0
+			i2 := uint64(0)
 
 			// x.Address.Version
 			i2++
@@ -88,7 +88,7 @@ func EncodeSizeSignedBlock(obj *coin.SignedBlock) int {
 			// x.Hours
 			i2 += 8
 
-			i1 += len(x.Out) * i2
+			i1 += uint64(len(x.Out)) * i2
 		}
 
 		i0 += i1
@@ -134,7 +134,7 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 	}
 
 	// obj.Block.Body.Transactions length check
-	if len(obj.Block.Body.Transactions) > math.MaxUint32 {
+	if uint64(len(obj.Block.Body.Transactions)) > math.MaxUint32 {
 		return errors.New("obj.Block.Body.Transactions length exceeds math.MaxUint32")
 	}
 
@@ -159,7 +159,7 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 		}
 
 		// x.Sigs length check
-		if len(x.Sigs) > math.MaxUint32 {
+		if uint64(len(x.Sigs)) > math.MaxUint32 {
 			return errors.New("x.Sigs length exceeds math.MaxUint32")
 		}
 
@@ -180,7 +180,7 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 		}
 
 		// x.In length check
-		if len(x.In) > math.MaxUint32 {
+		if uint64(len(x.In)) > math.MaxUint32 {
 			return errors.New("x.In length exceeds math.MaxUint32")
 		}
 
@@ -201,7 +201,7 @@ func EncodeSignedBlock(buf []byte, obj *coin.SignedBlock) error {
 		}
 
 		// x.Out length check
-		if len(x.Out) > math.MaxUint32 {
+		if uint64(len(x.Out)) > math.MaxUint32 {
 			return errors.New("x.Out length exceeds math.MaxUint32")
 		}
 

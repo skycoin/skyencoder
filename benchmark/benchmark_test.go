@@ -47,7 +47,7 @@ func TestEncodeSizeEqual(t *testing.T) {
 	bs := newBenchmarkStruct()
 	n1 := EncodeSizeBenchmarkStruct(bs)
 	n2 := encoder.Size(bs)
-	if n1 != n2 {
+	if n1 != uint64(n2) {
 		t.Fatalf("Encode size does not match (%d != %d)", n1, n2)
 	}
 }

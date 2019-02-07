@@ -45,7 +45,7 @@ var (
 	buildTags      = flag.String("tags", "", "comma-separated list of build tags to apply")
 	destPackage    = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
 	silent         = flag.Bool("silent", false, "disable all non-error log output")
-	noTest         = flag.Bool("no-test", false, "disable generating the _test.go file (test files require github.com/google/go-cmp/cmp)")
+	noTest         = flag.Bool("no-test", false, "disable generating the _test.go file (test files require github.com/google/go-cmp/cmp and github.com/skycoin/encodertest)")
 )
 
 func usage() {

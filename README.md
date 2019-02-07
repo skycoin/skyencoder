@@ -45,7 +45,7 @@ Usage of skyencoder:
 	skyencoder [flags] -struct T files... # Must be a single package
 Flags:
   -no-test
-    	disable generating the _test.go file (test files require github.com/google/go-cmp/cmp)
+    	disable generating the _test.go file (test files require github.com/google/go-cmp/cmp and github.com/skycoin/encodertest)
   -output-file string
     	output file name; default <struct_name>_skyencoder.go
   -output-path string

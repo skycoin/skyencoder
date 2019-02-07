@@ -9,29 +9,29 @@ import (
 )
 
 // EncodeSizeBenchmarkStruct computes the size of an encoded object of type BenchmarkStruct
-func EncodeSizeBenchmarkStruct(obj *BenchmarkStruct) int {
-	i0 := 0
+func EncodeSizeBenchmarkStruct(obj *BenchmarkStruct) uint64 {
+	i0 := uint64(0)
 
 	// obj.Int64
 	i0 += 8
 
 	// obj.String
-	i0 += 4 + len(obj.String)
+	i0 += 4 + uint64(len(obj.String))
 
 	// obj.StringSlice
 	i0 += 4
 	for _, x := range obj.StringSlice {
-		i1 := 0
+		i1 := uint64(0)
 
 		// x
-		i1 += 4 + len(x)
+		i1 += 4 + uint64(len(x))
 
 		i0 += i1
 	}
 
 	// obj.StaticStructArray
 	{
-		i1 := 0
+		i1 := uint64(0)
 
 		// x.A
 		i1++
@@ -45,10 +45,10 @@ func EncodeSizeBenchmarkStruct(obj *BenchmarkStruct) int {
 	// obj.DynamicStructSlice
 	i0 += 4
 	for _, x := range obj.DynamicStructSlice {
-		i1 := 0
+		i1 := uint64(0)
 
 		// x.C
-		i1 += 4 + len(x.C)
+		i1 += 4 + uint64(len(x.C))
 
 		i0 += i1
 	}
@@ -57,10 +57,10 @@ func EncodeSizeBenchmarkStruct(obj *BenchmarkStruct) int {
 	i0 += 3
 
 	// obj.ByteSlice
-	i0 += 4 + len(obj.ByteSlice)
+	i0 += 4 + uint64(len(obj.ByteSlice))
 
 	// obj.StringMaxLen
-	i0 += 4 + len(obj.StringMaxLen)
+	i0 += 4 + uint64(len(obj.StringMaxLen))
 
 	return i0
 }
@@ -76,7 +76,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	e.Int64(obj.Int64)
 
 	// obj.String length check
-	if len(obj.String) > math.MaxUint32 {
+	if uint64(len(obj.String)) > math.MaxUint32 {
 		return errors.New("obj.String length exceeds math.MaxUint32")
 	}
 
@@ -84,7 +84,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	e.ByteSlice([]byte(obj.String))
 
 	// obj.StringSlice length check
-	if len(obj.StringSlice) > math.MaxUint32 {
+	if uint64(len(obj.StringSlice)) > math.MaxUint32 {
 		return errors.New("obj.StringSlice length exceeds math.MaxUint32")
 	}
 
@@ -95,7 +95,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	for _, x := range obj.StringSlice {
 
 		// x length check
-		if len(x) > math.MaxUint32 {
+		if uint64(len(x)) > math.MaxUint32 {
 			return errors.New("x length exceeds math.MaxUint32")
 		}
 
@@ -116,7 +116,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	}
 
 	// obj.DynamicStructSlice length check
-	if len(obj.DynamicStructSlice) > math.MaxUint32 {
+	if uint64(len(obj.DynamicStructSlice)) > math.MaxUint32 {
 		return errors.New("obj.DynamicStructSlice length exceeds math.MaxUint32")
 	}
 
@@ -127,7 +127,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	for _, x := range obj.DynamicStructSlice {
 
 		// x.C length check
-		if len(x.C) > math.MaxUint32 {
+		if uint64(len(x.C)) > math.MaxUint32 {
 			return errors.New("x.C length exceeds math.MaxUint32")
 		}
 
@@ -140,7 +140,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	e.CopyBytes(obj.ByteArray[:])
 
 	// obj.ByteSlice length check
-	if len(obj.ByteSlice) > math.MaxUint32 {
+	if uint64(len(obj.ByteSlice)) > math.MaxUint32 {
 		return errors.New("obj.ByteSlice length exceeds math.MaxUint32")
 	}
 
@@ -156,7 +156,7 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	}
 
 	// obj.StringMaxLen length check
-	if len(obj.StringMaxLen) > math.MaxUint32 {
+	if uint64(len(obj.StringMaxLen)) > math.MaxUint32 {
 		return errors.New("obj.StringMaxLen length exceeds math.MaxUint32")
 	}
 

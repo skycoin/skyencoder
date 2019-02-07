@@ -24,8 +24,8 @@ func wrapEncodeSizeFunc(typeName, typePackageName, counterName, funcBody string)
 
 	return []byte(fmt.Sprintf(`
 // EncodeSize%[1]s computes the size of an encoded object of type %[1]s
-func EncodeSize%[1]s(obj *%[4]s) int {
-	%[2]s := 0
+func EncodeSize%[1]s(obj *%[4]s) uint64 {
+	%[2]s := uint64(0)
 
 	%[3]s
 
@@ -114,7 +114,7 @@ func buildEncodeSizeFloat64(name, counterName string, options *Options) string {
 func buildEncodeSizeString(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
-	%[2]s += 4 + len(%[1]s)
+	%[2]s += 4 + uint64(len(%[1]s))
 	`, name, counterName)
 
 	if options != nil && options.OmitEmpty {
@@ -141,7 +141,7 @@ func buildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemS
 		return fmt.Sprintf(`
 		// %[1]s
 		for _, %[2]s := range %[1]s {
-			%[4]s := 0
+			%[4]s := uint64(0)
 
 			%[3]s
 
@@ -153,30 +153,19 @@ func buildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemS
 	return fmt.Sprintf(`
 	// %[1]s
 	{
-		%[5]s := 0
+		%[5]s := uint64(0)
 
 		%[4]s
 
 		%[2]s += %[3]d * %[5]s
 	}
 	`, name, counterName, length, elemSection, nextCounterName)
-
-	// return fmt.Sprintf(`
-	// // %[1]s
-	// i += %[3]d * func() int {
-	// 	i := 0
-
-	// 	%[2]s
-
-	// 	return i
-	// }()
-	// `, name, elemSection, length)
 }
 
 func buildEncodeSizeByteSlice(name, counterName string, options *Options) string {
 	body := fmt.Sprintf(`
 	// %[1]s
-	%[2]s += 4 + len(%[1]s)
+	%[2]s += 4 + uint64(len(%[1]s))
 	`, name, counterName)
 
 	if options != nil && options.OmitEmpty {
@@ -201,7 +190,7 @@ func buildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemS
 		// %[1]s
 		%[2]s += 4
 		for _, %[3]s := range %[1]s {
-			%[5]s := 0
+			%[5]s := uint64(0)
 
 			%[4]s
 
@@ -213,24 +202,13 @@ func buildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemS
 		// %[1]s
 		%[2]s += 4
 		{
-			%[4]s := 0
+			%[4]s := uint64(0)
 
 			%[3]s
 
-			%[2]s += len(%[1]s) * %[4]s
+			%[2]s += uint64(len(%[1]s)) * %[4]s
 		}
 		`, name, counterName, elemSection, nextCounterName)
-
-		// body = fmt.Sprintf(`
-		// // %[1]s
-		// i += 4
-		// i += len(%[1]s) * func() int {
-		// 	i := 0
-
-		// 	%[2]s
-
-		// 	return i
-		// }()`, name, elemSection)
 	}
 
 	if options != nil && options.OmitEmpty {
@@ -261,7 +239,7 @@ func buildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarN
 		// %[1]s
 		%[2]s += 4
 		for %[3]s, %[4]s := range %[1]s {
-			%[7]s := 0
+			%[7]s := uint64(0)
 
 			%[5]s
 
@@ -275,29 +253,15 @@ func buildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarN
 		// %[1]s
 		%[2]s += 4
 		{
-			%[5]s := 0
+			%[5]s := uint64(0)
 
 			%[3]s
 
 			%[4]s
 
-			%[2]s += len(%[1]s) * %[5]s
+			%[2]s += uint64(len(%[1]s)) * %[5]s
 		}
 		`, name, counterName, keySection, elemSection, nextCounterName)
-
-		// body = fmt.Sprintf(`
-		// // %[1]s
-		// i += 4
-		// i += len(%[1]s) * func() int {
-		// 	i := 0
-
-		// 	%[2]s
-
-		// 	%[3]s
-
-		// 	return i
-		// }()
-		// `, name, keySection, elemSection)
 	}
 
 	if options != nil && options.OmitEmpty {
@@ -461,7 +425,7 @@ func buildEncodeString(name string, options *Options) string {
 	%[2]s
 
 	// %[1]s length check
-	if len(%[1]s) > math.MaxUint32 {
+	if uint64(len(%[1]s)) > math.MaxUint32 {
 		return errors.New("%[1]s length exceeds math.MaxUint32")
 	}
 
@@ -502,7 +466,7 @@ func buildEncodeByteSlice(name string, options *Options) string {
 	%[2]s
 
 	// %[1]s length check
-	if len(%[1]s) > math.MaxUint32 {
+	if uint64(len(%[1]s)) > math.MaxUint32 {
 		return errors.New("%[1]s length exceeds math.MaxUint32")
 	}
 
@@ -530,7 +494,7 @@ func buildEncodeSlice(name, elemVarName, elemSection string, options *Options) s
 	%[4]s
 
 	// %[1]s length check
-	if len(%[1]s) > math.MaxUint32 {
+	if uint64(len(%[1]s)) > math.MaxUint32 {
 		return errors.New("%[1]s length exceeds math.MaxUint32")
 	}
 
@@ -569,7 +533,7 @@ func buildEncodeMap(name, keyVarName, elemVarName, keySection, elemSection strin
 	%[6]s
 
 	// %[1]s length check
-	if len(%[1]s) > math.MaxUint32 {
+	if uint64(len(%[1]s)) > math.MaxUint32 {
 		return errors.New("%[1]s length exceeds math.MaxUint32")
 	}
 
@@ -994,7 +958,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/skycoin/skycoin/src/cipher/encoder/encodertest"
+	"github.com/skycoin/encodertest"
 )
 
 func newEmpty%[1]sForEncodeTest() *%[2]s {
@@ -1049,7 +1013,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	n1 := encoder.Size(obj)
 	n2 := EncodeSize%[1]s(obj)
 
-	if n1 != n2 {
+	if uint64(n1) != n2 {
 		t.Fatalf("encoder.Size() != EncodeSize%[1]s() (%%d != %%d)", n1, n2)
 	}
 
@@ -1126,7 +1090,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	}
 
 	// returns the number of bytes encoded by an omitempty field on a given object
-	omitEmptyLen := func(obj interface{}) int {
+	omitEmptyLen := func(obj interface{}) uint64 {
 		if !hasOmitEmptyField(obj) {
 			return 0
 		}
@@ -1144,7 +1108,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 			if f.Len() == 0 {
 				return 0
 			}
-			return 4 + f.Len()
+			return uint64(4 + f.Len())
 
 		default:
 			return 0
@@ -1274,7 +1238,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, tag string, obj *%[2]s
 	}
 
 	// returns the number of bytes encoded by an omitempty field on a given object
-	omitEmptyLen := func(obj interface{}) int {
+	omitEmptyLen := func(obj interface{}) uint64 {
 		if !hasOmitEmptyField(obj) {
 			return 0
 		}
@@ -1292,7 +1256,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, tag string, obj *%[2]s
 			if f.Len() == 0 {
 				return 0
 			}
-			return 4 + f.Len()
+			return uint64(4 + f.Len())
 
 		default:
 			return 0
@@ -1316,7 +1280,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, tag string, obj *%[2]s
 	// Test all possible truncations of the encoded byte array, but skip
 	// a truncation that would be valid where omitempty is removed
 	skipN := n - omitEmptyLen(obj)
-	for i := 0; i < n; i++ {
+	for i := uint64(0); i < n; i++ {
 		if i == skipN {
 			continue
 		}
