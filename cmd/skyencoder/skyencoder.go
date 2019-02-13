@@ -32,6 +32,7 @@ var (
 	outputPath     = flag.String("output-path", "", "output path; defaults to the package's path, or the file's containing folder")
 	buildTags      = flag.String("tags", "", "comma-separated list of build tags to apply")
 	destPackage    = flag.String("package", "", "package name for the output; if not provided, defaults to the struct's package")
+	unexported     = flag.Bool("unexported", false, "don't export generated methods (always true if the struct is not an exported type)")
 	silent         = flag.Bool("silent", false, "disable all non-error log output")
 	noTest         = flag.Bool("no-test", false, "disable generating the _test.go file (test files require github.com/google/go-cmp/cmp and github.com/skycoin/encodertest)")
 )
@@ -105,14 +106,19 @@ func main() {
 		fmtFilename = filepath.Join(args[0], "foo123123123123999.go")
 	}
 
-	src, err := skyencoder.BuildStructEncoder(structInfo, *destPackage, fmtFilename)
+	exported := structInfo.Exported
+	if *unexported {
+		exported = false
+	}
+
+	src, err := skyencoder.BuildStructEncoder(structInfo, *destPackage, fmtFilename, exported)
 	if err != nil {
 		log.Fatal("skyencoder.BuildStructEncoder failed: ", err)
 	}
 
 	var testSrc []byte
 	if !*noTest {
-		testSrc, err = skyencoder.BuildStructEncoderTest(structInfo, *destPackage, fmtFilename)
+		testSrc, err = skyencoder.BuildStructEncoderTest(structInfo, *destPackage, fmtFilename, exported)
 		if err != nil {
 			log.Fatal("skyencoder.BuildStructEncoderTest failed: ", err)
 		}

@@ -58,6 +58,8 @@ Flags:
     	struct name, must be set
   -tags string
     	comma-separated list of build tags to apply
+  -unexported
+    	don't export generated methods (always true if the struct is not an exported type)
 ```
 
 `skyencoder` generates a file with encode and decode methods for a struct, using the [Skycoin encoding format](github.com/skycoin/skycoin/wiki/encoder).
