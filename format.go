@@ -2,6 +2,7 @@ package skyencoder
 
 import (
 	"fmt"
+	"strings"
 )
 
 func cast(typ, name string) string {
@@ -17,6 +18,7 @@ type Options struct {
 /* Encode size */
 
 func wrapEncodeSizeFunc(typeName, typePackageName, counterName, funcBody string, exported bool) []byte {
+	titledTypeName := strings.Title(typeName)
 	fullTypeName := typeName
 	if typePackageName != "" {
 		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, typeName)
@@ -28,15 +30,15 @@ func wrapEncodeSizeFunc(typeName, typePackageName, counterName, funcBody string,
 	}
 
 	return []byte(fmt.Sprintf(`
-// %[5]sncodeSize%[1]s computes the size of an encoded object of type %[1]s
-func %[5]sncodeSize%[1]s(obj *%[4]s) uint64 {
+// %[5]sncodeSize%[6]s computes the size of an encoded object of type %[1]s
+func %[5]sncodeSize%[6]s(obj *%[4]s) uint64 {
 	%[2]s := uint64(0)
 
 	%[3]s
 
 	return %[2]s
 }
-`, typeName, counterName, funcBody, fullTypeName, exportChar))
+`, typeName, counterName, funcBody, fullTypeName, exportChar, titledTypeName))
 }
 
 func buildEncodeSizeBool(name, counterName string, options *Options) string {
@@ -284,6 +286,7 @@ func buildEncodeSizeMap(name, counterName, nextCounterName, keyVarName, elemVarN
 /* Encode */
 
 func wrapEncodeFunc(typeName, typePackageName, funcBody string, exported bool) []byte {
+	titledTypeName := strings.Title(typeName)
 	fullTypeName := typeName
 	if typePackageName != "" {
 		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, fullTypeName)
@@ -295,9 +298,9 @@ func wrapEncodeFunc(typeName, typePackageName, funcBody string, exported bool) [
 	}
 
 	return []byte(fmt.Sprintf(`
-// %[4]sncode%[1]s encodes an object of type %[1]s to the buffer in encoder.Encoder.
+// %[4]sncode%[5]s encodes an object of type %[1]s to the buffer in encoder.Encoder.
 // The buffer must be large enough to encode the object, otherwise an error is returned.
-func %[4]sncode%[1]s(buf []byte, obj *%[3]s) error {
+func %[4]sncode%[5]s(buf []byte, obj *%[3]s) error {
 	e := &encoder.Encoder{
 		Buffer: buf[:],
 	}
@@ -306,7 +309,7 @@ func %[4]sncode%[1]s(buf []byte, obj *%[3]s) error {
 
 	return nil
 }
-`, typeName, funcBody, fullTypeName, exportChar))
+`, typeName, funcBody, fullTypeName, exportChar, titledTypeName))
 }
 
 func buildEncodeBool(name string, castType bool, options *Options) string {
@@ -585,6 +588,7 @@ func encodeMaxLengthCheck(name string, options *Options) string {
 /* Decode */
 
 func wrapDecodeFunc(typeName, typePackageName, funcBody string, exported bool) []byte {
+	titledTypeName := strings.Title(typeName)
 	fullTypeName := typeName
 	if typePackageName != "" {
 		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, typeName)
@@ -596,9 +600,9 @@ func wrapDecodeFunc(typeName, typePackageName, funcBody string, exported bool) [
 	}
 
 	return []byte(fmt.Sprintf(`
-// %[4]secode%[1]s decodes an object of type %[1]s from the buffer in encoder.Decoder.
+// %[4]secode%[5]s decodes an object of type %[1]s from the buffer in encoder.Decoder.
 // Returns the number of bytes used from the buffer to decode the object.
-func %[4]secode%[1]s(buf []byte, obj *%[3]s) (int, error) {
+func %[4]secode%[5]s(buf []byte, obj *%[3]s) (int, error) {
 	d := &encoder.Decoder{
 		Buffer: buf[:],
 	}
@@ -607,7 +611,7 @@ func %[4]secode%[1]s(buf []byte, obj *%[3]s) (int, error) {
 
 	return len(buf) - len(d.Buffer), nil
 }
-`, typeName, funcBody, fullTypeName, exportChar))
+`, typeName, funcBody, fullTypeName, exportChar, titledTypeName))
 }
 
 func buildDecodeBool(name string, castType bool, typeName string, options *Options) string {
@@ -948,6 +952,7 @@ func decodeOmitEmptyCheck(options *Options) string {
 /* Test snippets */
 
 func buildTest(typeName, typePackageName, packageName string, hasMap, exported bool) string {
+	titledTypeName := strings.Title(typeName)
 	fullTypeName := typeName
 	if typePackageName != "" {
 		fullTypeName = fmt.Sprintf("%s.%s", typePackageName, typeName)
@@ -1336,5 +1341,5 @@ func TestSkyencoder%[1]sDecodeErrors(t *testing.T) {
 	}
 }
 
-`, typeName, fullTypeName, packageName, checkBytesEqual, encode, decode)
+`, titledTypeName, fullTypeName, packageName, checkBytesEqual, encode, decode)
 }
