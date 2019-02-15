@@ -65,9 +65,26 @@ func EncodeSizeBenchmarkStruct(obj *BenchmarkStruct) uint64 {
 	return i0
 }
 
-// EncodeBenchmarkStruct encodes an object of type BenchmarkStruct to the buffer in encoder.Encoder.
+// EncodeBenchmarkStruct encodes an object of type BenchmarkStruct to a buffer allocated to the exact size
+// required to encode the object.
+func EncodeBenchmarkStruct(obj *BenchmarkStruct) ([]byte, error) {
+	n := EncodeSizeBenchmarkStruct(obj)
+	buf := make([]byte, n)
+
+	if err := EncodeBenchmarkStructToBuffer(buf, obj); err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+// EncodeBenchmarkStructToBuffer encodes an object of type BenchmarkStruct to a []byte buffer.
 // The buffer must be large enough to encode the object, otherwise an error is returned.
-func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
+func EncodeBenchmarkStructToBuffer(buf []byte, obj *BenchmarkStruct) error {
+	if uint64(len(buf)) < EncodeSizeBenchmarkStruct(obj) {
+		return encoder.ErrBufferUnderflow
+	}
+
 	e := &encoder.Encoder{
 		Buffer: buf[:],
 	}
@@ -166,9 +183,10 @@ func EncodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) error {
 	return nil
 }
 
-// DecodeBenchmarkStruct decodes an object of type BenchmarkStruct from the buffer in encoder.Decoder.
+// DecodeBenchmarkStruct decodes an object of type BenchmarkStruct from a buffer.
 // Returns the number of bytes used from the buffer to decode the object.
-func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
+// If the buffer not long enough to decode the object, returns encoder.ErrBufferUnderflow.
+func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (uint64, error) {
 	d := &encoder.Decoder{
 		Buffer: buf[:],
 	}
@@ -177,7 +195,7 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 		// obj.Int64
 		i, err := d.Int64()
 		if err != nil {
-			return len(buf) - len(d.Buffer), err
+			return 0, err
 		}
 		obj.Int64 = i
 	}
@@ -187,12 +205,12 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 		ul, err := d.Uint32()
 		if err != nil {
-			return len(buf) - len(d.Buffer), err
+			return 0, err
 		}
 
 		length := int(ul)
 		if length < 0 || length > len(d.Buffer) {
-			return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+			return 0, encoder.ErrBufferUnderflow
 		}
 
 		obj.String = string(d.Buffer[:length])
@@ -204,12 +222,12 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 		ul, err := d.Uint32()
 		if err != nil {
-			return len(buf) - len(d.Buffer), err
+			return 0, err
 		}
 
 		length := int(ul)
 		if length < 0 || length > len(d.Buffer) {
-			return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+			return 0, encoder.ErrBufferUnderflow
 		}
 
 		if length != 0 {
@@ -221,12 +239,12 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 					ul, err := d.Uint32()
 					if err != nil {
-						return len(buf) - len(d.Buffer), err
+						return 0, err
 					}
 
 					length := int(ul)
 					if length < 0 || length > len(d.Buffer) {
-						return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+						return 0, encoder.ErrBufferUnderflow
 					}
 
 					obj.StringSlice[z1] = string(d.Buffer[:length])
@@ -243,7 +261,7 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 				// obj.StaticStructArray[z1].A
 				i, err := d.Uint8()
 				if err != nil {
-					return len(buf) - len(d.Buffer), err
+					return 0, err
 				}
 				obj.StaticStructArray[z1].A = i
 			}
@@ -252,7 +270,7 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 				// obj.StaticStructArray[z1].B
 				i, err := d.Uint64()
 				if err != nil {
-					return len(buf) - len(d.Buffer), err
+					return 0, err
 				}
 				obj.StaticStructArray[z1].B = i
 			}
@@ -265,12 +283,12 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 		ul, err := d.Uint32()
 		if err != nil {
-			return len(buf) - len(d.Buffer), err
+			return 0, err
 		}
 
 		length := int(ul)
 		if length < 0 || length > len(d.Buffer) {
-			return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+			return 0, encoder.ErrBufferUnderflow
 		}
 
 		if length != 0 {
@@ -282,12 +300,12 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 					ul, err := d.Uint32()
 					if err != nil {
-						return len(buf) - len(d.Buffer), err
+						return 0, err
 					}
 
 					length := int(ul)
 					if length < 0 || length > len(d.Buffer) {
-						return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+						return 0, encoder.ErrBufferUnderflow
 					}
 
 					obj.DynamicStructSlice[z1].C = string(d.Buffer[:length])
@@ -300,7 +318,7 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 	{
 		// obj.ByteArray
 		if len(d.Buffer) < len(obj.ByteArray) {
-			return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+			return 0, encoder.ErrBufferUnderflow
 		}
 		copy(obj.ByteArray[:], d.Buffer[:len(obj.ByteArray)])
 		d.Buffer = d.Buffer[len(obj.ByteArray):]
@@ -311,12 +329,12 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 		ul, err := d.Uint32()
 		if err != nil {
-			return len(buf) - len(d.Buffer), err
+			return 0, err
 		}
 
 		length := int(ul)
 		if length < 0 || length > len(d.Buffer) {
-			return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+			return 0, encoder.ErrBufferUnderflow
 		}
 
 		if length != 0 {
@@ -332,21 +350,34 @@ func DecodeBenchmarkStruct(buf []byte, obj *BenchmarkStruct) (int, error) {
 
 		ul, err := d.Uint32()
 		if err != nil {
-			return len(buf) - len(d.Buffer), err
+			return 0, err
 		}
 
 		length := int(ul)
 		if length < 0 || length > len(d.Buffer) {
-			return len(buf) - len(d.Buffer), encoder.ErrBufferUnderflow
+			return 0, encoder.ErrBufferUnderflow
 		}
 
 		if length > 4 {
-			return len(buf) - len(d.Buffer), encoder.ErrMaxLenExceeded
+			return 0, encoder.ErrMaxLenExceeded
 		}
 
 		obj.StringMaxLen = string(d.Buffer[:length])
 		d.Buffer = d.Buffer[length:]
 	}
 
-	return len(buf) - len(d.Buffer), nil
+	return uint64(len(buf) - len(d.Buffer)), nil
+}
+
+// DecodeBenchmarkStructExact decodes an object of type BenchmarkStruct from a buffer.
+// If the buffer not long enough to decode the object, returns encoder.ErrBufferUnderflow.
+// If the buffer is longer than required to decode the object, returns encoder.ErrRemainingBytes.
+func DecodeBenchmarkStructExact(buf []byte, obj *BenchmarkStruct) error {
+	if n, err := DecodeBenchmarkStruct(buf, obj); err != nil {
+		return err
+	} else if n != uint64(len(buf)) {
+		return encoder.ErrRemainingBytes
+	}
+
+	return nil
 }

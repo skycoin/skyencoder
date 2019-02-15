@@ -61,52 +61,6 @@ func newRandomZeroLenNilMaxLenAllStruct2ForEncodeTest(t *testing.T, rand *mathra
 }
 
 func testSkyencoderMaxLenAllStruct2(t *testing.T, obj *MaxLenAllStruct2) {
-	// EncodeSize
-
-	n1 := encoder.Size(obj)
-	n2 := EncodeSizeMaxLenAllStruct2(obj)
-
-	if uint64(n1) != n2 {
-		t.Fatalf("encoder.Size() != EncodeSizeMaxLenAllStruct2() (%d != %d)", n1, n2)
-	}
-
-	// Encode
-
-	data1 := encoder.Serialize(obj)
-
-	data2 := make([]byte, n2)
-	if err := EncodeMaxLenAllStruct2(data2, obj); err != nil {
-		t.Fatalf("EncodeMaxLenAllStruct2 failed: %v", err)
-	}
-
-	if len(data1) != len(data2) {
-		t.Fatalf("len(encoder.Serialize()) != len(EncodeMaxLenAllStruct2()) (%d != %d)", len(data1), len(data2))
-	}
-
-	// Decode
-
-	var obj2 MaxLenAllStruct2
-	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
-		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
-	} else if n != len(data1) {
-		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
-	}
-
-	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
-		t.Fatal("encoder.DeserializeRaw result wrong")
-	}
-
-	var obj3 MaxLenAllStruct2
-	if n, err := DecodeMaxLenAllStruct2(data2, &obj3); err != nil {
-		t.Fatalf("DecodeMaxLenAllStruct2 failed: %v", err)
-	} else if n != len(data2) {
-		t.Fatalf("DecodeMaxLenAllStruct2 bytes read length should be %d, is %d", len(data2), n)
-	}
-
-	if !cmp.Equal(obj2, obj3, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
-		t.Fatal("encoder.DeserializeRaw() != DecodeMaxLenAllStruct2()")
-	}
-
 	isEncodableField := func(f reflect.StructField) bool {
 		// Skip unexported fields
 		if f.PkgPath != "" {
@@ -163,13 +117,99 @@ func testSkyencoderMaxLenAllStruct2(t *testing.T, obj *MaxLenAllStruct2) {
 		}
 	}
 
+	// EncodeSize
+
+	n1 := encoder.Size(obj)
+	n2 := EncodeSizeMaxLenAllStruct2(obj)
+
+	if uint64(n1) != n2 {
+		t.Fatalf("encoder.Size() != EncodeSizeMaxLenAllStruct2() (%d != %d)", n1, n2)
+	}
+
+	// Encode
+
+	// encoder.Serialize
+	data1 := encoder.Serialize(obj)
+
+	// Encode
+	data2, err := EncodeMaxLenAllStruct2(obj)
+	if err != nil {
+		t.Fatalf("EncodeMaxLenAllStruct2 failed: %v", err)
+	}
+	if uint64(len(data2)) != n2 {
+		t.Fatal("EncodeMaxLenAllStruct2 produced bytes of unexpected length")
+	}
+	if len(data1) != len(data2) {
+		t.Fatalf("len(encoder.Serialize()) != len(EncodeMaxLenAllStruct2()) (%d != %d)", len(data1), len(data2))
+	}
+
+	// EncodeToBuffer
+	data3 := make([]byte, n2+5)
+	if err := EncodeMaxLenAllStruct2ToBuffer(data3, obj); err != nil {
+		t.Fatalf("EncodeMaxLenAllStruct2ToBuffer failed: %v", err)
+	}
+
+	// Decode
+
+	// encoder.DeserializeRaw
+	var obj2 MaxLenAllStruct2
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
+	}
+	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw result wrong")
+	}
+
+	// Decode
+	var obj3 MaxLenAllStruct2
+	if n, err := DecodeMaxLenAllStruct2(data2, &obj3); err != nil {
+		t.Fatalf("DecodeMaxLenAllStruct2 failed: %v", err)
+	} else if n != uint64(len(data2)) {
+		t.Fatalf("DecodeMaxLenAllStruct2 bytes read length should be %d, is %d", len(data2), n)
+	}
+	if !cmp.Equal(obj2, obj3, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw() != DecodeMaxLenAllStruct2()")
+	}
+
+	// Decode, excess buffer
+	var obj4 MaxLenAllStruct2
+	n, err := DecodeMaxLenAllStruct2(data3, &obj4)
+	if err != nil {
+		t.Fatalf("DecodeMaxLenAllStruct2 failed: %v", err)
+	}
+
+	if hasOmitEmptyField(&obj4) && omitEmptyLen(&obj4) == 0 {
+		// 4 bytes read for the omitEmpty length, which should be zero (see the 5 bytes added above)
+		if n != n2+4 {
+			t.Fatalf("DecodeMaxLenAllStruct2 bytes read length should be %d, is %d", n2+4, n)
+		}
+	} else {
+		if n != n2 {
+			t.Fatalf("DecodeMaxLenAllStruct2 bytes read length should be %d, is %d", n2, n)
+		}
+	}
+	if !cmp.Equal(obj2, obj4, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw() != DecodeMaxLenAllStruct2()")
+	}
+
+	// DecodeExact
+	var obj5 MaxLenAllStruct2
+	if err := DecodeMaxLenAllStruct2Exact(data2, &obj5); err != nil {
+		t.Fatalf("DecodeMaxLenAllStruct2 failed: %v", err)
+	}
+	if !cmp.Equal(obj2, obj5, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw() != DecodeMaxLenAllStruct2()")
+	}
+
 	// Check that the bytes read value is correct when providing an extended buffer
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
-		data3 := append(data2[:], padding...)
-		if n, err := DecodeMaxLenAllStruct2(data3, &obj3); err != nil {
+		data4 := append(data2[:], padding...)
+		if n, err := DecodeMaxLenAllStruct2(data4, &obj3); err != nil {
 			t.Fatalf("DecodeMaxLenAllStruct2 failed: %v", err)
-		} else if n != len(data2) {
+		} else if n != uint64(len(data2)) {
 			t.Fatalf("DecodeMaxLenAllStruct2 bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -220,6 +260,15 @@ func decodeMaxLenAllStruct2ExpectError(t *testing.T, buf []byte, expectedErr err
 		t.Fatal("DecodeMaxLenAllStruct2: expected error, got nil")
 	} else if err != expectedErr {
 		t.Fatalf("DecodeMaxLenAllStruct2: expected error %q, got %q", expectedErr, err)
+	}
+}
+
+func decodeMaxLenAllStruct2ExactExpectError(t *testing.T, buf []byte, expectedErr error) {
+	var obj MaxLenAllStruct2
+	if err := DecodeMaxLenAllStruct2Exact(buf, &obj); err == nil {
+		t.Fatal("DecodeMaxLenAllStruct2Exact: expected error, got nil")
+	} else if err != expectedErr {
+		t.Fatalf("DecodeMaxLenAllStruct2Exact: expected error %q, got %q", expectedErr, err)
 	}
 }
 
@@ -306,8 +355,8 @@ func testSkyencoderMaxLenAllStruct2DecodeErrors(t *testing.T, k int, tag string,
 	}
 
 	n := EncodeSizeMaxLenAllStruct2(obj)
-	buf := make([]byte, n)
-	if err := EncodeMaxLenAllStruct2(buf, obj); err != nil {
+	buf, err := EncodeMaxLenAllStruct2(obj)
+	if err != nil {
 		t.Fatalf("EncodeMaxLenAllStruct2 failed: %v", err)
 	}
 
@@ -315,6 +364,10 @@ func testSkyencoderMaxLenAllStruct2DecodeErrors(t *testing.T, k int, tag string,
 	if hasOmitEmptyField(obj) && numEncodableFields(obj) > 1 {
 		t.Run(fmt.Sprintf("%d %s buffer underflow nil", k, tag), func(t *testing.T) {
 			decodeMaxLenAllStruct2ExpectError(t, nil, encoder.ErrBufferUnderflow)
+		})
+
+		t.Run(fmt.Sprintf("%d %s exact buffer underflow nil", k, tag), func(t *testing.T) {
+			decodeMaxLenAllStruct2ExactExpectError(t, nil, encoder.ErrBufferUnderflow)
 		})
 	}
 
@@ -325,8 +378,13 @@ func testSkyencoderMaxLenAllStruct2DecodeErrors(t *testing.T, k int, tag string,
 		if i == skipN {
 			continue
 		}
+
 		t.Run(fmt.Sprintf("%d %s buffer underflow bytes=%d", k, tag, i), func(t *testing.T) {
 			decodeMaxLenAllStruct2ExpectError(t, buf[:i], encoder.ErrBufferUnderflow)
+		})
+
+		t.Run(fmt.Sprintf("%d %s exact buffer underflow bytes=%d", k, tag, i), func(t *testing.T) {
+			decodeMaxLenAllStruct2ExactExpectError(t, buf[:i], encoder.ErrBufferUnderflow)
 		})
 	}
 
@@ -338,6 +396,10 @@ func testSkyencoderMaxLenAllStruct2DecodeErrors(t *testing.T, k int, tag string,
 	} else {
 		buf = append(buf, 0)
 	}
+
+	t.Run(fmt.Sprintf("%d %s exact buffer remaining bytes", k, tag), func(t *testing.T) {
+		decodeMaxLenAllStruct2ExactExpectError(t, buf, encoder.ErrRemainingBytes)
+	})
 }
 
 func TestSkyencoderMaxLenAllStruct2DecodeErrors(t *testing.T) {

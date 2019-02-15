@@ -122,20 +122,20 @@ go test -benchmem -bench '.*' ./benchmark
 goos: darwin
 goarch: amd64
 pkg: github.com/skycoin/skyencoder/benchmark
-BenchmarkEncodeSize-8                        	300000000	         5.69 ns/op	       0 B/op	       0 allocs/op
-BenchmarkCipherEncodeSize-8                  	 1000000	      1371 ns/op	     120 B/op	      15 allocs/op
-BenchmarkEncode-8                            	10000000	       127 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeSizePlusEncode-8              	10000000	       177 ns/op	     112 B/op	       1 allocs/op
-BenchmarkCipherEncode-8                      	  500000	      3270 ns/op	     384 B/op	      32 allocs/op
-BenchmarkDecode-8                            	 5000000	       364 ns/op	     112 B/op	       9 allocs/op
-BenchmarkCipherDecode-8                      	 1000000	      2202 ns/op	     456 B/op	      27 allocs/op
-BenchmarkEncodeSizeSignedBlock-8             	50000000	        25.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkCipherEncodeSizeSignedBlock-8       	  200000	      7617 ns/op	     600 B/op	      75 allocs/op
-BenchmarkEncodeSignedBlock-8                 	 3000000	       423 ns/op	       0 B/op	       0 allocs/op
-BenchmarkEncodeSizePlusEncodeSignedBlock-8   	 2000000	       742 ns/op	    1792 B/op	       1 allocs/op
-BenchmarkCipherEncodeSignedBlock-8           	  100000	     18004 ns/op	    4080 B/op	     185 allocs/op
-BenchmarkDecodeSignedBlock-8                 	 1000000	      1029 ns/op	    1648 B/op	      10 allocs/op
-BenchmarkCipherDecodeSignedBlock-8           	  100000	     12466 ns/op	    5448 B/op	     130 allocs/op
+BenchmarkEncodeSize-8                    	200000000	         6.33 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCipherEncodeSize-8              	 1000000	      1488 ns/op	     128 B/op	      16 allocs/op
+BenchmarkEncodeToBuffer-8                	10000000	       133 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncode-8                        	10000000	       189 ns/op	     112 B/op	       1 allocs/op
+BenchmarkCipherEncode-8                  	  500000	      3103 ns/op	     400 B/op	      34 allocs/op
+BenchmarkDecode-8                        	 5000000	       375 ns/op	     120 B/op	      10 allocs/op
+BenchmarkCipherDecode-8                  	  500000	      2425 ns/op	     472 B/op	      29 allocs/op
+BenchmarkEncodeSizeSignedBlock-8         	50000000	        25.0 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCipherEncodeSizeSignedBlock-8   	  200000	      8125 ns/op	     600 B/op	      75 allocs/op
+BenchmarkEncodeSignedBlockToBuffer-8     	 3000000	       418 ns/op	       0 B/op	       0 allocs/op
+BenchmarkEncodeSignedBlock-8             	 2000000	       721 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkCipherEncodeSignedBlock-8       	  100000	     19673 ns/op	    4080 B/op	     185 allocs/op
+BenchmarkDecodeSignedBlock-8             	 1000000	      1002 ns/op	    1648 B/op	      10 allocs/op
+BenchmarkCipherDecodeSignedBlock-8       	  100000	     13919 ns/op	    5448 B/op	     130 allocs/op
 PASS
-ok  	github.com/skycoin/skyencoder/benchmark	24.378s
+ok  	github.com/skycoin/skyencoder/benchmark	24.198s
 ```

@@ -62,56 +62,6 @@ func newRandomZeroLenNilOnlyOmitEmptyStructForEncodeTest(t *testing.T, rand *mat
 }
 
 func testSkyencoderOnlyOmitEmptyStruct(t *testing.T, obj *OnlyOmitEmptyStruct) {
-	// EncodeSize
-
-	n1 := encoder.Size(obj)
-	n2 := EncodeSizeOnlyOmitEmptyStruct(obj)
-
-	if uint64(n1) != n2 {
-		t.Fatalf("encoder.Size() != EncodeSizeOnlyOmitEmptyStruct() (%d != %d)", n1, n2)
-	}
-
-	// Encode
-
-	data1 := encoder.Serialize(obj)
-
-	data2 := make([]byte, n2)
-	if err := EncodeOnlyOmitEmptyStruct(data2, obj); err != nil {
-		t.Fatalf("EncodeOnlyOmitEmptyStruct failed: %v", err)
-	}
-
-	if len(data1) != len(data2) {
-		t.Fatalf("len(encoder.Serialize()) != len(EncodeOnlyOmitEmptyStruct()) (%d != %d)", len(data1), len(data2))
-	}
-
-	if !bytes.Equal(data1, data2) {
-		t.Fatal("encoder.Serialize() != Encode[1]s()")
-	}
-
-	// Decode
-
-	var obj2 OnlyOmitEmptyStruct
-	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
-		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
-	} else if n != len(data1) {
-		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
-	}
-
-	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
-		t.Fatal("encoder.DeserializeRaw result wrong")
-	}
-
-	var obj3 OnlyOmitEmptyStruct
-	if n, err := DecodeOnlyOmitEmptyStruct(data2, &obj3); err != nil {
-		t.Fatalf("DecodeOnlyOmitEmptyStruct failed: %v", err)
-	} else if n != len(data2) {
-		t.Fatalf("DecodeOnlyOmitEmptyStruct bytes read length should be %d, is %d", len(data2), n)
-	}
-
-	if !cmp.Equal(obj2, obj3, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
-		t.Fatal("encoder.DeserializeRaw() != DecodeOnlyOmitEmptyStruct()")
-	}
-
 	isEncodableField := func(f reflect.StructField) bool {
 		// Skip unexported fields
 		if f.PkgPath != "" {
@@ -168,13 +118,103 @@ func testSkyencoderOnlyOmitEmptyStruct(t *testing.T, obj *OnlyOmitEmptyStruct) {
 		}
 	}
 
+	// EncodeSize
+
+	n1 := encoder.Size(obj)
+	n2 := EncodeSizeOnlyOmitEmptyStruct(obj)
+
+	if uint64(n1) != n2 {
+		t.Fatalf("encoder.Size() != EncodeSizeOnlyOmitEmptyStruct() (%d != %d)", n1, n2)
+	}
+
+	// Encode
+
+	// encoder.Serialize
+	data1 := encoder.Serialize(obj)
+
+	// Encode
+	data2, err := EncodeOnlyOmitEmptyStruct(obj)
+	if err != nil {
+		t.Fatalf("EncodeOnlyOmitEmptyStruct failed: %v", err)
+	}
+	if uint64(len(data2)) != n2 {
+		t.Fatal("EncodeOnlyOmitEmptyStruct produced bytes of unexpected length")
+	}
+	if len(data1) != len(data2) {
+		t.Fatalf("len(encoder.Serialize()) != len(EncodeOnlyOmitEmptyStruct()) (%d != %d)", len(data1), len(data2))
+	}
+
+	// EncodeToBuffer
+	data3 := make([]byte, n2+5)
+	if err := EncodeOnlyOmitEmptyStructToBuffer(data3, obj); err != nil {
+		t.Fatalf("EncodeOnlyOmitEmptyStructToBuffer failed: %v", err)
+	}
+
+	if !bytes.Equal(data1, data2) {
+		t.Fatal("encoder.Serialize() != Encode[1]s()")
+	}
+
+	// Decode
+
+	// encoder.DeserializeRaw
+	var obj2 OnlyOmitEmptyStruct
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
+	}
+	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw result wrong")
+	}
+
+	// Decode
+	var obj3 OnlyOmitEmptyStruct
+	if n, err := DecodeOnlyOmitEmptyStruct(data2, &obj3); err != nil {
+		t.Fatalf("DecodeOnlyOmitEmptyStruct failed: %v", err)
+	} else if n != uint64(len(data2)) {
+		t.Fatalf("DecodeOnlyOmitEmptyStruct bytes read length should be %d, is %d", len(data2), n)
+	}
+	if !cmp.Equal(obj2, obj3, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw() != DecodeOnlyOmitEmptyStruct()")
+	}
+
+	// Decode, excess buffer
+	var obj4 OnlyOmitEmptyStruct
+	n, err := DecodeOnlyOmitEmptyStruct(data3, &obj4)
+	if err != nil {
+		t.Fatalf("DecodeOnlyOmitEmptyStruct failed: %v", err)
+	}
+
+	if hasOmitEmptyField(&obj4) && omitEmptyLen(&obj4) == 0 {
+		// 4 bytes read for the omitEmpty length, which should be zero (see the 5 bytes added above)
+		if n != n2+4 {
+			t.Fatalf("DecodeOnlyOmitEmptyStruct bytes read length should be %d, is %d", n2+4, n)
+		}
+	} else {
+		if n != n2 {
+			t.Fatalf("DecodeOnlyOmitEmptyStruct bytes read length should be %d, is %d", n2, n)
+		}
+	}
+	if !cmp.Equal(obj2, obj4, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw() != DecodeOnlyOmitEmptyStruct()")
+	}
+
+	// DecodeExact
+	var obj5 OnlyOmitEmptyStruct
+	if err := DecodeOnlyOmitEmptyStructExact(data2, &obj5); err != nil {
+		t.Fatalf("DecodeOnlyOmitEmptyStruct failed: %v", err)
+	}
+	if !cmp.Equal(obj2, obj5, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
+		t.Fatal("encoder.DeserializeRaw() != DecodeOnlyOmitEmptyStruct()")
+	}
+
 	// Check that the bytes read value is correct when providing an extended buffer
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
-		data3 := append(data2[:], padding...)
-		if n, err := DecodeOnlyOmitEmptyStruct(data3, &obj3); err != nil {
+		data4 := append(data2[:], padding...)
+		if n, err := DecodeOnlyOmitEmptyStruct(data4, &obj3); err != nil {
 			t.Fatalf("DecodeOnlyOmitEmptyStruct failed: %v", err)
-		} else if n != len(data2) {
+		} else if n != uint64(len(data2)) {
 			t.Fatalf("DecodeOnlyOmitEmptyStruct bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -225,6 +265,15 @@ func decodeOnlyOmitEmptyStructExpectError(t *testing.T, buf []byte, expectedErr 
 		t.Fatal("DecodeOnlyOmitEmptyStruct: expected error, got nil")
 	} else if err != expectedErr {
 		t.Fatalf("DecodeOnlyOmitEmptyStruct: expected error %q, got %q", expectedErr, err)
+	}
+}
+
+func decodeOnlyOmitEmptyStructExactExpectError(t *testing.T, buf []byte, expectedErr error) {
+	var obj OnlyOmitEmptyStruct
+	if err := DecodeOnlyOmitEmptyStructExact(buf, &obj); err == nil {
+		t.Fatal("DecodeOnlyOmitEmptyStructExact: expected error, got nil")
+	} else if err != expectedErr {
+		t.Fatalf("DecodeOnlyOmitEmptyStructExact: expected error %q, got %q", expectedErr, err)
 	}
 }
 
@@ -311,8 +360,8 @@ func testSkyencoderOnlyOmitEmptyStructDecodeErrors(t *testing.T, k int, tag stri
 	}
 
 	n := EncodeSizeOnlyOmitEmptyStruct(obj)
-	buf := make([]byte, n)
-	if err := EncodeOnlyOmitEmptyStruct(buf, obj); err != nil {
+	buf, err := EncodeOnlyOmitEmptyStruct(obj)
+	if err != nil {
 		t.Fatalf("EncodeOnlyOmitEmptyStruct failed: %v", err)
 	}
 
@@ -320,6 +369,10 @@ func testSkyencoderOnlyOmitEmptyStructDecodeErrors(t *testing.T, k int, tag stri
 	if hasOmitEmptyField(obj) && numEncodableFields(obj) > 1 {
 		t.Run(fmt.Sprintf("%d %s buffer underflow nil", k, tag), func(t *testing.T) {
 			decodeOnlyOmitEmptyStructExpectError(t, nil, encoder.ErrBufferUnderflow)
+		})
+
+		t.Run(fmt.Sprintf("%d %s exact buffer underflow nil", k, tag), func(t *testing.T) {
+			decodeOnlyOmitEmptyStructExactExpectError(t, nil, encoder.ErrBufferUnderflow)
 		})
 	}
 
@@ -330,8 +383,13 @@ func testSkyencoderOnlyOmitEmptyStructDecodeErrors(t *testing.T, k int, tag stri
 		if i == skipN {
 			continue
 		}
+
 		t.Run(fmt.Sprintf("%d %s buffer underflow bytes=%d", k, tag, i), func(t *testing.T) {
 			decodeOnlyOmitEmptyStructExpectError(t, buf[:i], encoder.ErrBufferUnderflow)
+		})
+
+		t.Run(fmt.Sprintf("%d %s exact buffer underflow bytes=%d", k, tag, i), func(t *testing.T) {
+			decodeOnlyOmitEmptyStructExactExpectError(t, buf[:i], encoder.ErrBufferUnderflow)
 		})
 	}
 
@@ -343,6 +401,10 @@ func testSkyencoderOnlyOmitEmptyStructDecodeErrors(t *testing.T, k int, tag stri
 	} else {
 		buf = append(buf, 0)
 	}
+
+	t.Run(fmt.Sprintf("%d %s exact buffer remaining bytes", k, tag), func(t *testing.T) {
+		decodeOnlyOmitEmptyStructExactExpectError(t, buf, encoder.ErrRemainingBytes)
+	})
 }
 
 func TestSkyencoderOnlyOmitEmptyStructDecodeErrors(t *testing.T) {

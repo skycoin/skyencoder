@@ -77,18 +77,18 @@ func TestEncodeEqual(t *testing.T) {
 
 	data1 := make([]byte, EncodeSizeBenchmarkStruct(bs))
 
-	if err := EncodeBenchmarkStruct(data1, bs); err != nil {
+	if err := EncodeBenchmarkStructToBuffer(data1, bs); err != nil {
 		t.Fatal(err)
 	}
 
 	data2 := encoder.Serialize(bs)
 
 	if !bytes.Equal(data1, data2) {
-		t.Fatal("EncodeBenchmarkStruct() != encoder.Serialize()")
+		t.Fatal("EncodeBenchmarkStructToBuffer() != encoder.Serialize()")
 	}
 }
 
-func BenchmarkEncode(b *testing.B) {
+func BenchmarkEncodeToBuffer(b *testing.B) {
 	bs := newBenchmarkStruct()
 
 	n := EncodeSizeBenchmarkStruct(bs)
@@ -98,20 +98,17 @@ func BenchmarkEncode(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		EncodeBenchmarkStruct(buf[:], bs)
+		EncodeBenchmarkStructToBuffer(buf[:], bs)
 	}
 }
 
-func BenchmarkEncodeSizePlusEncode(b *testing.B) {
-	// Performs EncodeSize + Encode to better mimic encoder.Serialize which will do a size calculation internally
+func BenchmarkEncode(b *testing.B) {
 	bs := newBenchmarkStruct()
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		n := EncodeSizeBenchmarkStruct(bs)
-		buf := make([]byte, n)
-		EncodeBenchmarkStruct(buf[:], bs)
+		EncodeBenchmarkStruct(bs)
 	}
 }
 
@@ -144,7 +141,7 @@ func TestDecodeEqual(t *testing.T) {
 	var bs1 BenchmarkStruct
 	if n, err := DecodeBenchmarkStruct(data1, &bs1); err != nil {
 		t.Fatal(err)
-	} else if n != len(data1) {
+	} else if n != uint64(len(data1)) {
 		t.Fatalf("DecodeBenchmarkStruct n should be %d, is %d", len(data1), n)
 	}
 
@@ -299,7 +296,7 @@ func BenchmarkCipherEncodeSizeSignedBlock(b *testing.B) {
 	}
 }
 
-func BenchmarkEncodeSignedBlock(b *testing.B) {
+func BenchmarkEncodeSignedBlockToBuffer(b *testing.B) {
 	bs := newSignedBlock()
 
 	n := EncodeSizeSignedBlock(bs)
@@ -309,20 +306,18 @@ func BenchmarkEncodeSignedBlock(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		EncodeSignedBlock(buf[:], bs)
+		EncodeSignedBlockToBuffer(buf[:], bs)
 	}
 }
 
-func BenchmarkEncodeSizePlusEncodeSignedBlock(b *testing.B) {
+func BenchmarkEncodeSignedBlock(b *testing.B) {
 	// Performs EncodeSize + Encode to better mimic encoder.Serialize which will do a size calculation internally
 	bs := newSignedBlock()
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		n := EncodeSizeSignedBlock(bs)
-		buf := make([]byte, n)
-		EncodeSignedBlock(buf[:], bs)
+		EncodeSignedBlock(bs)
 	}
 }
 
