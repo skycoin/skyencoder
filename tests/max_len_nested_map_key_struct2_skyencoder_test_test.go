@@ -155,7 +155,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct2(t *testing.T, obj *MaxLenNestedMapK
 	var obj2 MaxLenNestedMapKeyStruct2
 	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
-	} else if n != len(data1) {
+	} else if n != uint64(len(data1)) {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {

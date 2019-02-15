@@ -148,7 +148,7 @@ func TestDecodeEqual(t *testing.T) {
 	var bs2 BenchmarkStruct
 	if n, err := encoder.DeserializeRaw(data2, &bs2); err != nil {
 		t.Fatal(err)
-	} else if n != len(data2) {
+	} else if n != uint64(len(data2)) {
 		t.Fatal(encoder.ErrRemainingBytes)
 	}
 

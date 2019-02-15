@@ -155,7 +155,7 @@ func testSkyencoderMaxLenAllStruct1(t *testing.T, obj *MaxLenAllStruct1) {
 	var obj2 MaxLenAllStruct1
 	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
-	} else if n != len(data1) {
+	} else if n != uint64(len(data1)) {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
