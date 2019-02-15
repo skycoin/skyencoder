@@ -1066,9 +1066,11 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	// Decode
 
 	var obj2 %[2]s
-	err = encoder.DeserializeRaw(data1, &obj2)
+	n, err = encoder.DeserializeRaw(data1, &obj2)
 	if err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %%v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %%v", encoder.ErrRemainingBytes)
 	}
 
 
