@@ -76,8 +76,7 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err := EncodeOmitEmptyMaxLenStruct2(data2, obj)
-	if err != nil {
+	if err := EncodeOmitEmptyMaxLenStruct2(data2, obj); err != nil {
 		t.Fatalf("EncodeOmitEmptyMaxLenStruct2 failed: %v", err)
 	}
 
@@ -86,15 +85,16 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	}
 
 	if !bytes.Equal(data1, data2) {
-		t.Fatal("encoder.Serialize() != EncodeOmitEmptyMaxLenStruct2()")
+		t.Fatal("encoder.Serialize() != Encode[1]s()")
 	}
 
 	// Decode
 
 	var obj2 OmitEmptyMaxLenStruct2
-	err = encoder.DeserializeRaw(data1, &obj2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
@@ -102,11 +102,9 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	}
 
 	var obj3 OmitEmptyMaxLenStruct2
-	n, err := DecodeOmitEmptyMaxLenStruct2(data2, &obj3)
-	if err != nil {
+	if n, err := DecodeOmitEmptyMaxLenStruct2(data2, &obj3); err != nil {
 		t.Fatalf("DecodeOmitEmptyMaxLenStruct2 failed: %v", err)
-	}
-	if n != len(data2) {
+	} else if n != len(data2) {
 		t.Fatalf("DecodeOmitEmptyMaxLenStruct2 bytes read length should be %d, is %d", len(data2), n)
 	}
 
@@ -174,11 +172,9 @@ func testSkyencoderOmitEmptyMaxLenStruct2(t *testing.T, obj *OmitEmptyMaxLenStru
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
 		data3 := append(data2[:], padding...)
-		n, err = DecodeOmitEmptyMaxLenStruct2(data3, &obj3)
-		if err != nil {
+		if n, err := DecodeOmitEmptyMaxLenStruct2(data3, &obj3); err != nil {
 			t.Fatalf("DecodeOmitEmptyMaxLenStruct2 failed: %v", err)
-		}
-		if n != len(data2) {
+		} else if n != len(data2) {
 			t.Fatalf("DecodeOmitEmptyMaxLenStruct2 bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -225,13 +221,9 @@ func TestSkyencoderOmitEmptyMaxLenStruct2(t *testing.T) {
 
 func decodeOmitEmptyMaxLenStruct2ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj OmitEmptyMaxLenStruct2
-	_, err := DecodeOmitEmptyMaxLenStruct2(buf, &obj)
-
-	if err == nil {
+	if _, err := DecodeOmitEmptyMaxLenStruct2(buf, &obj); err == nil {
 		t.Fatal("DecodeOmitEmptyMaxLenStruct2: expected error, got nil")
-	}
-
-	if err != expectedErr {
+	} else if err != expectedErr {
 		t.Fatalf("DecodeOmitEmptyMaxLenStruct2: expected error %q, got %q", expectedErr, err)
 	}
 }
@@ -320,8 +312,7 @@ func testSkyencoderOmitEmptyMaxLenStruct2DecodeErrors(t *testing.T, k int, tag s
 
 	n := EncodeSizeOmitEmptyMaxLenStruct2(obj)
 	buf := make([]byte, n)
-	err := EncodeOmitEmptyMaxLenStruct2(buf, obj)
-	if err != nil {
+	if err := EncodeOmitEmptyMaxLenStruct2(buf, obj); err != nil {
 		t.Fatalf("EncodeOmitEmptyMaxLenStruct2 failed: %v", err)
 	}
 

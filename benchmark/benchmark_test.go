@@ -77,8 +77,7 @@ func TestEncodeEqual(t *testing.T) {
 
 	data1 := make([]byte, EncodeSizeBenchmarkStruct(bs))
 
-	err := EncodeBenchmarkStruct(data1, bs)
-	if err != nil {
+	if err := EncodeBenchmarkStruct(data1, bs); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,18 +142,17 @@ func TestDecodeEqual(t *testing.T) {
 	copy(data2[:], data[:])
 
 	var bs1 BenchmarkStruct
-	n, err := DecodeBenchmarkStruct(data1, &bs1)
-	if err != nil {
+	if n, err := DecodeBenchmarkStruct(data1, &bs1); err != nil {
 		t.Fatal(err)
-	}
-	if n != len(data1) {
+	} else if n != len(data1) {
 		t.Fatalf("DecodeBenchmarkStruct n should be %d, is %d", len(data1), n)
 	}
 
 	var bs2 BenchmarkStruct
-	err = encoder.DeserializeRaw(data2, &bs2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data2, &bs2); err != nil {
 		t.Fatal(err)
+	} else if n != len(data2) {
+		t.Fatal(encoder.ErrRemainingBytes)
 	}
 
 	if !reflect.DeepEqual(*bs, bs2) {

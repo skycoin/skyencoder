@@ -59,7 +59,7 @@ func testBuildCode(t *testing.T, structName, filename string) []byte {
 		t.Fatal(err)
 	}
 
-	src, err := BuildStructEncoder(sInfo, "", filename)
+	src, err := BuildStructEncoder(sInfo, "", filename, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestBuildSkycoinSignedBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	src, err := BuildStructEncoder(sInfo, "", filename)
+	src, err := BuildStructEncoder(sInfo, "", filename, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func testBuildCodeFails(t *testing.T, structName, filename string) {
 		t.Fatal(err)
 	}
 
-	_, err = BuildStructEncoder(sInfo, "", filename)
+	_, err = BuildStructEncoder(sInfo, "", filename, true)
 	if err == nil {
 		t.Fatal("Expected BuildStructEncoder error")
 	}

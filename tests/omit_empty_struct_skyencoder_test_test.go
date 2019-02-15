@@ -76,8 +76,7 @@ func testSkyencoderOmitEmptyStruct(t *testing.T, obj *OmitEmptyStruct) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err := EncodeOmitEmptyStruct(data2, obj)
-	if err != nil {
+	if err := EncodeOmitEmptyStruct(data2, obj); err != nil {
 		t.Fatalf("EncodeOmitEmptyStruct failed: %v", err)
 	}
 
@@ -86,15 +85,16 @@ func testSkyencoderOmitEmptyStruct(t *testing.T, obj *OmitEmptyStruct) {
 	}
 
 	if !bytes.Equal(data1, data2) {
-		t.Fatal("encoder.Serialize() != EncodeOmitEmptyStruct()")
+		t.Fatal("encoder.Serialize() != Encode[1]s()")
 	}
 
 	// Decode
 
 	var obj2 OmitEmptyStruct
-	err = encoder.DeserializeRaw(data1, &obj2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
@@ -102,11 +102,9 @@ func testSkyencoderOmitEmptyStruct(t *testing.T, obj *OmitEmptyStruct) {
 	}
 
 	var obj3 OmitEmptyStruct
-	n, err := DecodeOmitEmptyStruct(data2, &obj3)
-	if err != nil {
+	if n, err := DecodeOmitEmptyStruct(data2, &obj3); err != nil {
 		t.Fatalf("DecodeOmitEmptyStruct failed: %v", err)
-	}
-	if n != len(data2) {
+	} else if n != len(data2) {
 		t.Fatalf("DecodeOmitEmptyStruct bytes read length should be %d, is %d", len(data2), n)
 	}
 
@@ -174,11 +172,9 @@ func testSkyencoderOmitEmptyStruct(t *testing.T, obj *OmitEmptyStruct) {
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
 		data3 := append(data2[:], padding...)
-		n, err = DecodeOmitEmptyStruct(data3, &obj3)
-		if err != nil {
+		if n, err := DecodeOmitEmptyStruct(data3, &obj3); err != nil {
 			t.Fatalf("DecodeOmitEmptyStruct failed: %v", err)
-		}
-		if n != len(data2) {
+		} else if n != len(data2) {
 			t.Fatalf("DecodeOmitEmptyStruct bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -225,13 +221,9 @@ func TestSkyencoderOmitEmptyStruct(t *testing.T) {
 
 func decodeOmitEmptyStructExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj OmitEmptyStruct
-	_, err := DecodeOmitEmptyStruct(buf, &obj)
-
-	if err == nil {
+	if _, err := DecodeOmitEmptyStruct(buf, &obj); err == nil {
 		t.Fatal("DecodeOmitEmptyStruct: expected error, got nil")
-	}
-
-	if err != expectedErr {
+	} else if err != expectedErr {
 		t.Fatalf("DecodeOmitEmptyStruct: expected error %q, got %q", expectedErr, err)
 	}
 }
@@ -320,8 +312,7 @@ func testSkyencoderOmitEmptyStructDecodeErrors(t *testing.T, k int, tag string, 
 
 	n := EncodeSizeOmitEmptyStruct(obj)
 	buf := make([]byte, n)
-	err := EncodeOmitEmptyStruct(buf, obj)
-	if err != nil {
+	if err := EncodeOmitEmptyStruct(buf, obj); err != nil {
 		t.Fatalf("EncodeOmitEmptyStruct failed: %v", err)
 	}
 

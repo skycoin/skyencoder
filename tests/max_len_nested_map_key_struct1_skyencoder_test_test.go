@@ -75,8 +75,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T, obj *MaxLenNestedMapK
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err := EncodeMaxLenNestedMapKeyStruct1(data2, obj)
-	if err != nil {
+	if err := EncodeMaxLenNestedMapKeyStruct1(data2, obj); err != nil {
 		t.Fatalf("EncodeMaxLenNestedMapKeyStruct1 failed: %v", err)
 	}
 
@@ -87,9 +86,10 @@ func testSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T, obj *MaxLenNestedMapK
 	// Decode
 
 	var obj2 MaxLenNestedMapKeyStruct1
-	err = encoder.DeserializeRaw(data1, &obj2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
@@ -97,11 +97,9 @@ func testSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T, obj *MaxLenNestedMapK
 	}
 
 	var obj3 MaxLenNestedMapKeyStruct1
-	n, err := DecodeMaxLenNestedMapKeyStruct1(data2, &obj3)
-	if err != nil {
+	if n, err := DecodeMaxLenNestedMapKeyStruct1(data2, &obj3); err != nil {
 		t.Fatalf("DecodeMaxLenNestedMapKeyStruct1 failed: %v", err)
-	}
-	if n != len(data2) {
+	} else if n != len(data2) {
 		t.Fatalf("DecodeMaxLenNestedMapKeyStruct1 bytes read length should be %d, is %d", len(data2), n)
 	}
 
@@ -169,11 +167,9 @@ func testSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T, obj *MaxLenNestedMapK
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
 		data3 := append(data2[:], padding...)
-		n, err = DecodeMaxLenNestedMapKeyStruct1(data3, &obj3)
-		if err != nil {
+		if n, err := DecodeMaxLenNestedMapKeyStruct1(data3, &obj3); err != nil {
 			t.Fatalf("DecodeMaxLenNestedMapKeyStruct1 failed: %v", err)
-		}
-		if n != len(data2) {
+		} else if n != len(data2) {
 			t.Fatalf("DecodeMaxLenNestedMapKeyStruct1 bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -220,13 +216,9 @@ func TestSkyencoderMaxLenNestedMapKeyStruct1(t *testing.T) {
 
 func decodeMaxLenNestedMapKeyStruct1ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj MaxLenNestedMapKeyStruct1
-	_, err := DecodeMaxLenNestedMapKeyStruct1(buf, &obj)
-
-	if err == nil {
+	if _, err := DecodeMaxLenNestedMapKeyStruct1(buf, &obj); err == nil {
 		t.Fatal("DecodeMaxLenNestedMapKeyStruct1: expected error, got nil")
-	}
-
-	if err != expectedErr {
+	} else if err != expectedErr {
 		t.Fatalf("DecodeMaxLenNestedMapKeyStruct1: expected error %q, got %q", expectedErr, err)
 	}
 }
@@ -315,8 +307,7 @@ func testSkyencoderMaxLenNestedMapKeyStruct1DecodeErrors(t *testing.T, k int, ta
 
 	n := EncodeSizeMaxLenNestedMapKeyStruct1(obj)
 	buf := make([]byte, n)
-	err := EncodeMaxLenNestedMapKeyStruct1(buf, obj)
-	if err != nil {
+	if err := EncodeMaxLenNestedMapKeyStruct1(buf, obj); err != nil {
 		t.Fatalf("EncodeMaxLenNestedMapKeyStruct1 failed: %v", err)
 	}
 

@@ -76,8 +76,7 @@ func testSkyencoderMaxLenStringStruct1(t *testing.T, obj *MaxLenStringStruct1) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err := EncodeMaxLenStringStruct1(data2, obj)
-	if err != nil {
+	if err := EncodeMaxLenStringStruct1(data2, obj); err != nil {
 		t.Fatalf("EncodeMaxLenStringStruct1 failed: %v", err)
 	}
 
@@ -86,15 +85,16 @@ func testSkyencoderMaxLenStringStruct1(t *testing.T, obj *MaxLenStringStruct1) {
 	}
 
 	if !bytes.Equal(data1, data2) {
-		t.Fatal("encoder.Serialize() != EncodeMaxLenStringStruct1()")
+		t.Fatal("encoder.Serialize() != Encode[1]s()")
 	}
 
 	// Decode
 
 	var obj2 MaxLenStringStruct1
-	err = encoder.DeserializeRaw(data1, &obj2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
@@ -102,11 +102,9 @@ func testSkyencoderMaxLenStringStruct1(t *testing.T, obj *MaxLenStringStruct1) {
 	}
 
 	var obj3 MaxLenStringStruct1
-	n, err := DecodeMaxLenStringStruct1(data2, &obj3)
-	if err != nil {
+	if n, err := DecodeMaxLenStringStruct1(data2, &obj3); err != nil {
 		t.Fatalf("DecodeMaxLenStringStruct1 failed: %v", err)
-	}
-	if n != len(data2) {
+	} else if n != len(data2) {
 		t.Fatalf("DecodeMaxLenStringStruct1 bytes read length should be %d, is %d", len(data2), n)
 	}
 
@@ -174,11 +172,9 @@ func testSkyencoderMaxLenStringStruct1(t *testing.T, obj *MaxLenStringStruct1) {
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
 		data3 := append(data2[:], padding...)
-		n, err = DecodeMaxLenStringStruct1(data3, &obj3)
-		if err != nil {
+		if n, err := DecodeMaxLenStringStruct1(data3, &obj3); err != nil {
 			t.Fatalf("DecodeMaxLenStringStruct1 failed: %v", err)
-		}
-		if n != len(data2) {
+		} else if n != len(data2) {
 			t.Fatalf("DecodeMaxLenStringStruct1 bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -225,13 +221,9 @@ func TestSkyencoderMaxLenStringStruct1(t *testing.T) {
 
 func decodeMaxLenStringStruct1ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj MaxLenStringStruct1
-	_, err := DecodeMaxLenStringStruct1(buf, &obj)
-
-	if err == nil {
+	if _, err := DecodeMaxLenStringStruct1(buf, &obj); err == nil {
 		t.Fatal("DecodeMaxLenStringStruct1: expected error, got nil")
-	}
-
-	if err != expectedErr {
+	} else if err != expectedErr {
 		t.Fatalf("DecodeMaxLenStringStruct1: expected error %q, got %q", expectedErr, err)
 	}
 }
@@ -320,8 +312,7 @@ func testSkyencoderMaxLenStringStruct1DecodeErrors(t *testing.T, k int, tag stri
 
 	n := EncodeSizeMaxLenStringStruct1(obj)
 	buf := make([]byte, n)
-	err := EncodeMaxLenStringStruct1(buf, obj)
-	if err != nil {
+	if err := EncodeMaxLenStringStruct1(buf, obj); err != nil {
 		t.Fatalf("EncodeMaxLenStringStruct1 failed: %v", err)
 	}
 

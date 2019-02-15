@@ -1052,8 +1052,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err := %[5]s%[1]s(data2, obj)
-	if err != nil {
+	if err := %[5]s%[1]s(data2, obj); err != nil {
 		t.Fatalf("%[5]s%[1]s failed: %%v", err)
 	}
 
@@ -1066,8 +1065,7 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	// Decode
 
 	var obj2 %[2]s
-	n, err = encoder.DeserializeRaw(data1, &obj2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %%v", err)
 	} else if n != len(data1) {
 		t.Fatalf("encoder.DeserializeRaw failed: %%v", encoder.ErrRemainingBytes)
@@ -1079,11 +1077,9 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	}
 
 	var obj3 %[2]s
-	n, err := %[6]s%[1]s(data2, &obj3)
-	if err != nil {
+	if n, err := %[6]s%[1]s(data2, &obj3); err != nil {
 		t.Fatalf("%[6]s%[1]s failed: %%v", err)
-	}
-	if n != len(data2) {
+	} else if n != len(data2) {
 		t.Fatalf("%[6]s%[1]s bytes read length should be %%d, is %%d", len(data2), n)
 	}
 
@@ -1151,11 +1147,9 @@ func testSkyencoder%[1]s(t *testing.T, obj *%[2]s) {
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
 		data3 := append(data2[:], padding...)
-		n, err = %[6]s%[1]s(data3, &obj3)
-		if err != nil {
+		if n, err := %[6]s%[1]s(data3, &obj3); err != nil {
 			t.Fatalf("%[6]s%[1]s failed: %%v", err)
-		}
-		if n != len(data2) {
+		} else if n != len(data2) {
 			t.Fatalf("%[6]s%[1]s bytes read length should be %%d, is %%d", len(data2), n)
 		}
 	}
@@ -1202,13 +1196,9 @@ func TestSkyencoder%[1]s(t *testing.T) {
 
 func decode%[1]sExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj %[2]s
-	_, err := %[6]s%[1]s(buf, &obj)
-
-	if err == nil {
+	if _, err := %[6]s%[1]s(buf, &obj); err == nil {
 		t.Fatal("%[6]s%[1]s: expected error, got nil")
-	}
-
-	if err != expectedErr {
+	} else if err != expectedErr {
 		t.Fatalf("%[6]s%[1]s: expected error %%q, got %%q", expectedErr, err)
 	}
 }
@@ -1297,8 +1287,7 @@ func testSkyencoder%[1]sDecodeErrors(t *testing.T, k int, tag string, obj *%[2]s
 
 	n := %[5]sSize%[1]s(obj)
 	buf := make([]byte, n)
-	err := %[5]s%[1]s(buf, obj)
-	if err != nil {
+	if err := %[5]s%[1]s(buf, obj); err != nil {
 		t.Fatalf("%[5]s%[1]s failed: %%v", err)
 	}
 

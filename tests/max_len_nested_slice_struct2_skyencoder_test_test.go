@@ -76,8 +76,7 @@ func testSkyencoderMaxLenNestedSliceStruct2(t *testing.T, obj *MaxLenNestedSlice
 	data1 := encoder.Serialize(obj)
 
 	data2 := make([]byte, n2)
-	err := EncodeMaxLenNestedSliceStruct2(data2, obj)
-	if err != nil {
+	if err := EncodeMaxLenNestedSliceStruct2(data2, obj); err != nil {
 		t.Fatalf("EncodeMaxLenNestedSliceStruct2 failed: %v", err)
 	}
 
@@ -86,15 +85,16 @@ func testSkyencoderMaxLenNestedSliceStruct2(t *testing.T, obj *MaxLenNestedSlice
 	}
 
 	if !bytes.Equal(data1, data2) {
-		t.Fatal("encoder.Serialize() != EncodeMaxLenNestedSliceStruct2()")
+		t.Fatal("encoder.Serialize() != Encode[1]s()")
 	}
 
 	// Decode
 
 	var obj2 MaxLenNestedSliceStruct2
-	err = encoder.DeserializeRaw(data1, &obj2)
-	if err != nil {
+	if n, err := encoder.DeserializeRaw(data1, &obj2); err != nil {
 		t.Fatalf("encoder.DeserializeRaw failed: %v", err)
+	} else if n != len(data1) {
+		t.Fatalf("encoder.DeserializeRaw failed: %v", encoder.ErrRemainingBytes)
 	}
 
 	if !cmp.Equal(*obj, obj2, cmpopts.EquateEmpty(), encodertest.IgnoreAllUnexported()) {
@@ -102,11 +102,9 @@ func testSkyencoderMaxLenNestedSliceStruct2(t *testing.T, obj *MaxLenNestedSlice
 	}
 
 	var obj3 MaxLenNestedSliceStruct2
-	n, err := DecodeMaxLenNestedSliceStruct2(data2, &obj3)
-	if err != nil {
+	if n, err := DecodeMaxLenNestedSliceStruct2(data2, &obj3); err != nil {
 		t.Fatalf("DecodeMaxLenNestedSliceStruct2 failed: %v", err)
-	}
-	if n != len(data2) {
+	} else if n != len(data2) {
 		t.Fatalf("DecodeMaxLenNestedSliceStruct2 bytes read length should be %d, is %d", len(data2), n)
 	}
 
@@ -174,11 +172,9 @@ func testSkyencoderMaxLenNestedSliceStruct2(t *testing.T, obj *MaxLenNestedSlice
 	if !hasOmitEmptyField(&obj3) || omitEmptyLen(&obj3) > 0 {
 		padding := []byte{0xFF, 0xFE, 0xFD, 0xFC}
 		data3 := append(data2[:], padding...)
-		n, err = DecodeMaxLenNestedSliceStruct2(data3, &obj3)
-		if err != nil {
+		if n, err := DecodeMaxLenNestedSliceStruct2(data3, &obj3); err != nil {
 			t.Fatalf("DecodeMaxLenNestedSliceStruct2 failed: %v", err)
-		}
-		if n != len(data2) {
+		} else if n != len(data2) {
 			t.Fatalf("DecodeMaxLenNestedSliceStruct2 bytes read length should be %d, is %d", len(data2), n)
 		}
 	}
@@ -225,13 +221,9 @@ func TestSkyencoderMaxLenNestedSliceStruct2(t *testing.T) {
 
 func decodeMaxLenNestedSliceStruct2ExpectError(t *testing.T, buf []byte, expectedErr error) {
 	var obj MaxLenNestedSliceStruct2
-	_, err := DecodeMaxLenNestedSliceStruct2(buf, &obj)
-
-	if err == nil {
+	if _, err := DecodeMaxLenNestedSliceStruct2(buf, &obj); err == nil {
 		t.Fatal("DecodeMaxLenNestedSliceStruct2: expected error, got nil")
-	}
-
-	if err != expectedErr {
+	} else if err != expectedErr {
 		t.Fatalf("DecodeMaxLenNestedSliceStruct2: expected error %q, got %q", expectedErr, err)
 	}
 }
@@ -320,8 +312,7 @@ func testSkyencoderMaxLenNestedSliceStruct2DecodeErrors(t *testing.T, k int, tag
 
 	n := EncodeSizeMaxLenNestedSliceStruct2(obj)
 	buf := make([]byte, n)
-	err := EncodeMaxLenNestedSliceStruct2(buf, obj)
-	if err != nil {
+	if err := EncodeMaxLenNestedSliceStruct2(buf, obj); err != nil {
 		t.Fatalf("EncodeMaxLenNestedSliceStruct2 failed: %v", err)
 	}
 
