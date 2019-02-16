@@ -11,4 +11,4 @@ install:
 
 script:
   - make check
-  - skyencoder -struct DemoStruct github.com/skycoin/skyencoder
+  - skyencoder -struct DemoStruct github.com/skycoin/skyencoder/tests
