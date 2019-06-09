@@ -28,6 +28,7 @@ check-generate-unchanged: check-generate-tests-unchanged check-generate-benchmar
 generate-tests: ## Generate encoders and test for test objects
 	go run cmd/skyencoder/skyencoder.go -struct DemoStruct -output-file demo_struct_skyencoder_test.go github.com/skycoin/skyencoder/tests
 	go run cmd/skyencoder/skyencoder.go -struct DemoStructOmitEmpty -output-file demo_struct_omit_empty_skyencoder_test.go github.com/skycoin/skyencoder/tests
+	go run cmd/skyencoder/skyencoder.go -struct DemoStructNestedBytes -output-file demo_struct_nested_bytes_skyencoder_test.go github.com/skycoin/skyencoder/tests
 	go run cmd/skyencoder/skyencoder.go -struct MaxLenStringStruct1 -output-file max_len_string_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
 	go run cmd/skyencoder/skyencoder.go -struct MaxLenStringStruct2 -output-file max_len_string_struct2_skyencoder_test.go github.com/skycoin/skyencoder/tests
 	go run cmd/skyencoder/skyencoder.go -struct MaxLenAllStruct1 -output-file max_len_all_struct1_skyencoder_test.go github.com/skycoin/skyencoder/tests
@@ -48,6 +49,8 @@ check-generate-tests-unchanged: ## Check that make generate-tests did not change
 	@if [ "$(shell git diff ./tests/demo_struct_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
 	@if [ "$(shell git diff ./tests/demo_struct_omit_empty_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
 	@if [ "$(shell git diff ./tests/demo_struct_omit_empty_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/demo_struct_nested_bytes_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
+	@if [ "$(shell git diff ./tests/demo_struct_nested_bytes_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
 	@if [ "$(shell git diff ./tests/max_len_string_struct1_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
 	@if [ "$(shell git diff ./tests/max_len_string_struct1_skyencoder_test_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
 	@if [ "$(shell git diff ./tests/max_len_string_struct2_skyencoder_test.go | wc -l | tr -d ' ')" != "0" ] ; then echo 'Changes detected after make generate-tests' ; exit 2 ; fi
