@@ -170,13 +170,15 @@ func buildEncodeSizeArray(name, counterName, nextCounterName, elemVarName, elemS
 }
 
 func buildEncodeSizeByteSlice(name, counterName string, options *Options) string {
+	debugPrintf("buildEncodeSizeByteSlice: name=%s counterName=%s\n", name, counterName)
+
 	body := fmt.Sprintf(`
 	// %[1]s
 	%[2]s += 4 + uint64(len(%[1]s))
 	`, name, counterName)
 
 	if options != nil && options.OmitEmpty {
-		return fmt.Sprintf(`
+		body = fmt.Sprintf(`
 		// omitempty
 		if len(%[1]s) != 0 {
 			%[2]s
@@ -190,7 +192,7 @@ func buildEncodeSizeByteSlice(name, counterName string, options *Options) string
 func buildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemSection string, isDynamic bool, options *Options) string {
 	var body string
 
-	debugPrintf("BuildEncodeSizeSlice: counterName=%s\n", counterName)
+	debugPrintf("buildEncodeSizeSlice: name=%s counterName=%s nextCounterName=%s\n", name, counterName, nextCounterName)
 
 	if isDynamic {
 		body = fmt.Sprintf(`
@@ -219,7 +221,7 @@ func buildEncodeSizeSlice(name, counterName, nextCounterName, elemVarName, elemS
 	}
 
 	if options != nil && options.OmitEmpty {
-		return fmt.Sprintf(`
+		body = fmt.Sprintf(`
 		// omitempty
 		if len(%[1]s) != 0 {
 			%[2]s

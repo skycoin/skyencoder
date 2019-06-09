@@ -94,6 +94,16 @@ type DemoStructOmitEmpty struct {
 	OmitEmpty []byte `enc:",omitempty"`
 }
 
+/* nested byte array */
+
+type DemoStructNestedBytes struct {
+	Objects []DemoStructNestedBytesInner
+}
+
+type DemoStructNestedBytesInner struct {
+	Data []byte
+}
+
 /* maxlen tag tests */
 
 type MaxLenStringStruct1 struct {
