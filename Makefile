@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: build test test-386 test-amd64 bench
+.PHONY: build test test-386 test-amd64 bench generate
+.PHONY: check-generate-unchanged
 .PHONY: generate-tests check-generate-tests-unchanged
 .PHONY: generate-benchmarks check-generate-benchmarks-unchanged
 .PHONY: format help
